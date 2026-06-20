@@ -4,17 +4,28 @@ import 'package:musicplayer/models/song.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DatabaseService {
-  late Isar isar;
+  DatabaseService._internal();
+  static final DatabaseService instance = DatabaseService._internal();
+
+  Isar? _isar;
+
+  Isar get isar {
+    if (_isar == null) {
+      throw Exception('Isar has not been initialized. Call init() first.');
+    }
+    return _isar!;
+  }
 
   Future<void> init() async {
+    if (_isar != null) return;
+
     final dir = await getApplicationDocumentsDirectory();
-    isar = await Isar.open(
+    _isar = await Isar.open(
       [SongSchema, PlaylistSchema],
       directory: dir.path,
     );
   }
 
-  // Song operations
   Future<void> saveSongs(List<Song> songs) async {
     await isar.writeTxn(() async {
       await isar.songs.putAll(songs);
@@ -31,7 +42,6 @@ class DatabaseService {
     });
   }
 
-  // Playlist operations
   Future<void> savePlaylist(Playlist playlist) async {
     await isar.writeTxn(() async {
       await isar.playlists.put(playlist);

@@ -6,7 +6,9 @@ import 'package:musicplayer/services/database_service.dart';
 import 'package:musicplayer/services/music_scanner.dart';
 
 // Service Providers
-final dbServiceProvider = Provider((ref) => DatabaseService());
+final dbServiceProvider = Provider<DatabaseService>((ref) {
+  return DatabaseService.instance;
+});
 
 final musicScannerProvider = Provider((ref) {
   final dbService = ref.watch(dbServiceProvider);

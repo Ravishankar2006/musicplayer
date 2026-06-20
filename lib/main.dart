@@ -5,6 +5,7 @@ import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/services/audio_handler.dart';
 import 'package:musicplayer/utils/app_theme.dart';
 import 'package:musicplayer/ui/screens/home_screen.dart';
+import 'package:musicplayer/services/database_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +19,7 @@ void main() async {
       androidNotificationOngoing: true,
     ),
   );
-
+  await DatabaseService.instance.init();
   runApp(
     const ProviderScope(
       child: MusicPlayerApp(),
