@@ -1,0 +1,53 @@
+name: musicplayer
+description: "A premium offline music player with dark glassmorphism aesthetic."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0-184.0.dev
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Audio Playback
+  just_audio: ^0.9.40
+  audio_service: ^0.18.15
+  just_audio_background: ^0.0.1-beta.11
+
+  # Metadata & Querying
+  on_audio_query: ^2.9.0
+  audio_metadata_reader: ^1.6.0
+  path_provider: ^2.1.2
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # Database
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+
+  # UI & Effects
+  glass_kit: ^4.0.2
+  waveform_visualizer: ^1.0.0
+  google_fonts: ^6.1.0
+  flutter_blurhash: ^0.8.2
+  palette_generator_master: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Code Generation
+  build_runner: ^2.4.8
+  isar_generator: ^3.1.0+1
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
