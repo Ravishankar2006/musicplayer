@@ -6,10 +6,11 @@ import 'package:musicplayer/services/audio_handler.dart';
 import 'package:musicplayer/utils/app_theme.dart';
 import 'package:musicplayer/ui/screens/home_screen.dart';
 import 'package:musicplayer/services/database_service.dart';
+import 'package:waveform_visualizer/waveform_visualizer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  WaveformVisualizer.initialize();
   // Initialize Audio Service
   globalAudioHandler = await AudioService.init(
     builder: () => MyAudioHandler(),

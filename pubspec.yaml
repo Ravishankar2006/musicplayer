@@ -32,6 +32,7 @@ dependencies:
 
   # UI & Effects
   glass_kit: ^4.0.2
+  just_waveform: ^0.0.7
   waveform_visualizer: ^1.0.0
   google_fonts: ^6.1.0
   flutter_blurhash: ^0.8.2

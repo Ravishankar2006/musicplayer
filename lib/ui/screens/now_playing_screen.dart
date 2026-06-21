@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/widgets/glass_container.dart';
 
+import '../widgets/music_waveform.dart';
+
+
 class NowPlayingScreen extends ConsumerWidget {
   const NowPlayingScreen({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentItemAsync = ref.watch(currentMediaItemProvider);
@@ -95,11 +97,16 @@ class NowPlayingScreen extends ConsumerWidget {
                 const Spacer(),
                 
                 // Visualizer
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: SizedBox(
                     height: 60,
-                    child: Center(child: Text("Visualizer placeholder")),
+                    child: Center(
+                      child: playbackStateAsync.maybeWhen(
+                        data: (state) => MusicWaveform(isPlaying: state.playing),
+                        orElse: () => const SizedBox.shrink(),
+                      ),
+                    ),
                   ),
                 ),
                 
@@ -132,7 +139,7 @@ class NowPlayingScreen extends ConsumerWidget {
                             },
                             child: CircleAvatar(
                               radius: 30,
-                              backgroundColor: const Color(0xFF00E5FF).withOpacity(0.8),
+                              backgroundColor: const Color(0xFF00E5FF).withAlpha((0.8 * 255).round()),
                               child: Icon(
                                 state.playing ? Icons.pause : Icons.play_arrow,
                                 color: Colors.black,

@@ -32,7 +32,7 @@ class AppGlassContainer extends StatelessWidget {
       borderColor: AppTheme.glassBorder,
       borderWidth: 1.0,
       elevation: 10,
-      shadowColor: Colors.black.withOpacity(0.5),
+      shadowColor: Colors.black.withAlpha((0.5 * 255).round()),
       child: child,
     );
   }

@@ -36,7 +36,7 @@ class MusicScanner {
 
       // Extract more detailed metadata if available using audio_metadata_reader
       // This is useful for high-end players
-      var metadata;
+      AudioMetadata? metadata;
       try {
         final file = File(deviceSong.data);
         if (await file.exists()) {
@@ -56,7 +56,7 @@ class MusicScanner {
         dateAdded: DateTime.fromMillisecondsSinceEpoch((deviceSong.dateAdded ?? 0) * 1000),
         trackNumber: metadata?.trackNumber,
         discNumber: metadata?.discNumber,
-        genre: metadata?.genres?.isNotEmpty == true ? metadata.genres.first : null,
+        genre: metadata?.genres.isNotEmpty == true ? metadata!.genres.first : null,
       ));
     }
 

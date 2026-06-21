@@ -24,8 +24,8 @@ class AppTheme {
       scaffoldBackgroundColor: primaryBackground,
       colorScheme: const ColorScheme.dark(
         primary: accentCyan,
-        background: primaryBackground,
-        surface: glassColor,
+        surface: primaryBackground,
+        onSurface: Colors.white,
       ),
       textTheme: GoogleFonts.montserratTextTheme(
         const TextTheme(
