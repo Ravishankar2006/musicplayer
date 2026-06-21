@@ -1,0 +1,54 @@
+Launching lib/main.dart on Linux in debug mode...
+Building Linux application...                                   
+✓ Built build/linux/x64/debug/bundle/musicplayer
+Gdk-Message: 19:51:10.176: Unable to load  from the cursor theme
+Syncing files to device Linux...                                
+waveform_visualizer v1.0.0 initialized
+╔══════════════════════════════════════════════════════╗
+║                 ISAR CONNECT STARTED                 ║
+╟──────────────────────────────────────────────────────╢
+║         Open the link to connect to the Isar         ║
+║        Inspector while this build is running.        ║
+╟──────────────────────────────────────────────────────╢
+║ https://inspect.isar.dev/3.1.0+1/#/34403/cWIdm-OUq7E ║
+╚══════════════════════════════════════════════════════╝
+Syncing files to device Linux...                                   371ms
+
+Flutter run key commands.
+r Hot reload. 🔥🔥🔥
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on Linux is available at: http://127.0.0.1:34403/cWIdm-OUq7E=/
+The Flutter DevTools debugger and profiler on Linux is available at: http://127.0.0.1:34403/cWIdm-OUq7E=/devtools/?uri=ws://127.0.0.1:34403/cWIdm-OUq7E=/ws
+media_kit: NativeReferenceHolder: Allocated 1052866672
+
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 0.1020, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 0.2000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(15.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Another exception was thrown: ListTile background color or ink splashes may be invisible.
+Non-C locale detected. This is not supported.
+Call 'setlocale(LC_NUMERIC, "C");' in your code.
+Application finished.

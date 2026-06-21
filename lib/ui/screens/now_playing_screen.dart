@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/widgets/glass_container.dart';
-
-import '../widgets/music_waveform.dart';
-
+import 'package:musicplayer/ui/widgets/song_artwork.dart';
+import 'package:musicplayer/ui/widgets/music_waveform.dart';
 
 class NowPlayingScreen extends ConsumerWidget {
   const NowPlayingScreen({super.key});
@@ -54,24 +53,28 @@ class NowPlayingScreen extends ConsumerWidget {
                 
                 // Album Art
                 currentItemAsync.when(
-                  data: (item) => Center(
-                    child: AppGlassContainer(
-                      width: 300,
-                      height: 300,
-                      padding: const EdgeInsets.all(20),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: Container(
-                          color: Colors.white10,
-                          child: const Icon(Icons.music_note, size: 100, color: Colors.white24),
+                  data: (item) {
+                    final mediaStoreId = item?.extras?['mediaStoreId'] as int?;
+                    final localArtworkPath = item?.extras?['localArtworkPath'] as String?;
+
+                    return Center(
+                      child: AppGlassContainer(
+                        width: 300,
+                        height: 300,
+                        padding: const EdgeInsets.all(20),
+                        child: SongArtwork(
+                          mediaStoreId: mediaStoreId,
+                          localArtworkPath: localArtworkPath,
+                          size: 260,
+                          borderRadius: 15,
                         ),
                       ),
-                    ),
-                  ),
-                  loading: () => const CircularProgressIndicator(),
-                  error: (e, s) => const Icon(Icons.error),
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => const Center(child: Icon(Icons.error)),
                 ),
-                
+
                 const SizedBox(height: 40),
                 
                 // Track Info

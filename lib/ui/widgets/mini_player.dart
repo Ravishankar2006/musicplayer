@@ -4,6 +4,8 @@ import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/screens/now_playing_screen.dart';
 import 'package:musicplayer/ui/widgets/glass_container.dart';
 
+import 'package:musicplayer/ui/widgets/song_artwork.dart';
+
 class MiniPlayer extends ConsumerWidget {
   const MiniPlayer({super.key});
 
@@ -30,14 +32,10 @@ class MiniPlayer extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      width: 45,
-                      height: 45,
-                      color: Colors.white10,
-                      child: const Icon(Icons.music_note, color: Colors.white54),
-                    ),
+                  SongArtwork(
+                    mediaStoreId: item.extras?['mediaStoreId'] as int?,
+                    localArtworkPath: item.extras?['localArtworkPath'] as String?,
+                    size: 45,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

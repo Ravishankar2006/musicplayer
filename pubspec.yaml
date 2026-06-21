@@ -14,6 +14,7 @@ dependencies:
 
   # Audio Playback
   just_audio: ^0.9.40
+  just_audio_media_kit: ^2.1.0
   audio_service: ^0.18.15
   just_audio_background: ^0.0.1-beta.11
 
@@ -21,6 +22,9 @@ dependencies:
   on_audio_query: ^2.9.0
   audio_metadata_reader: ^1.6.0
   path_provider: ^2.1.2
+  file_picker: ^8.1.0
+  permission_handler: ^11.3.1
+  path: ^1.9.0
 
   # State Management
   flutter_riverpod: ^2.4.9
@@ -37,6 +41,8 @@ dependencies:
   google_fonts: ^6.1.0
   flutter_blurhash: ^0.8.2
   palette_generator_master: ^1.1.0
+  crypto: ^3.0.3
+  ffi: ^2.1.2
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/widgets/glass_container.dart';
 import 'package:musicplayer/ui/widgets/mini_player.dart';
+import 'package:musicplayer/ui/widgets/song_artwork.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -54,14 +55,10 @@ class HomeScreen extends ConsumerWidget {
                               borderRadius: 15,
                               height: 70,
                               child: ListTile(
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    color: Colors.white10,
-                                    child: const Icon(Icons.music_note, color: Colors.white54),
-                                  ),
+                                leading: SongArtwork(
+                                  mediaStoreId: song.mediaStoreId,
+                                  localArtworkPath: song.localArtworkPath,
+                                  size: 45,
                                 ),
                                 title: Text(song.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                                 subtitle: Text(song.artist ?? 'Unknown Artist', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white54)),
@@ -96,13 +93,14 @@ class HomeScreen extends ConsumerWidget {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
-        child: FloatingActionButton(
+        child: FloatingActionButton.extended(
           backgroundColor: const Color(0xFF00E5FF),
           onPressed: () async {
-            await ref.read(musicScannerProvider).scanMusic();
+            await ref.read(musicScannerProvider).scanFolder();
             ref.invalidate(songsProvider);
           },
-          child: const Icon(Icons.refresh, color: Colors.black),
+          label: const Text('SCAN FOLDER', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          icon: const Icon(Icons.folder_open, color: Colors.black),
         ),
       ),
     );

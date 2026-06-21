@@ -19,6 +19,12 @@ class Song {
   final int? discNumber;
   final String? genre;
   
+  // The original ID from Android MediaStore (required for QueryArtworkWidget)
+  int? mediaStoreId;
+  
+  // Local path to extracted/cached artwork
+  String? localArtworkPath;
+
   bool isFavorite = false;
   int playCount = 0;
   DateTime? lastPlayed;
@@ -34,6 +40,8 @@ class Song {
     this.trackNumber,
     this.discNumber,
     this.genre,
+    this.mediaStoreId,
+    this.localArtworkPath,
     this.isFavorite = false,
     this.playCount = 0,
     this.lastPlayed,

@@ -39,6 +39,31 @@ subprojects {
         sourceCompatibility = "11"
         targetCompatibility = "11"
     }
+
+    // Configure Android projects
+    listOf("com.android.application", "com.android.library").forEach { pluginId ->
+        plugins.withId(pluginId) {
+            val android = extensions.getByName("android")
+            
+            // Force compileSdk to 36
+            try {
+                android.javaClass.getMethod("setCompileSdk", Int::class.java).invoke(android, 36)
+            } catch (e1: Exception) {
+                try {
+                    android.javaClass.getMethod("setCompileSdkVersion", Object::class.java).invoke(android, "android-36")
+                } catch (e2: Exception) {}
+            }
+
+            // Fix namespaces
+            try {
+                val getNamespace = android.javaClass.getMethod("getNamespace")
+                val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
+                if (getNamespace.invoke(android) == null) {
+                    setNamespace.invoke(android, project.group.toString())
+                }
+            } catch (e: Exception) {}
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

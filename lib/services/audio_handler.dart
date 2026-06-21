@@ -66,11 +66,16 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       title: song.title,
       artist: song.artist ?? 'Unknown Artist',
       duration: Duration(milliseconds: song.duration ?? 0),
+      extras: {
+        'mediaStoreId': song.mediaStoreId,
+        'localArtworkPath': song.localArtworkPath,
+      },
     );
     this.mediaItem.add(mediaItem);
 
     try {
       await _player.setFilePath(song.path);
+      await _player.setVolume(1.0); // Explicitly set volume to 1.0 for Linux/Desktop
       play();
     } catch (e) {
       print("Error loading audio: $e");
