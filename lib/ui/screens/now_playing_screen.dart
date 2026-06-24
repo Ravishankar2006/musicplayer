@@ -54,8 +54,8 @@ class NowPlayingScreen extends ConsumerWidget {
                 // Album Art
                 currentItemAsync.when(
                   data: (item) {
-                    final mediaStoreId = item?.extras?['mediaStoreId'] as int?;
                     final localArtworkPath = item?.extras?['localArtworkPath'] as String?;
+                    final audioPath = item?.id;
 
                     return Center(
                       child: AppGlassContainer(
@@ -63,8 +63,8 @@ class NowPlayingScreen extends ConsumerWidget {
                         height: 300,
                         padding: const EdgeInsets.all(20),
                         child: SongArtwork(
-                          mediaStoreId: mediaStoreId,
                           localArtworkPath: localArtworkPath,
+                          audioPath: audioPath,
                           size: 260,
                           borderRadius: 15,
                         ),

@@ -33,8 +33,8 @@ class MiniPlayer extends ConsumerWidget {
               child: Row(
                 children: [
                   SongArtwork(
-                    mediaStoreId: item.extras?['mediaStoreId'] as int?,
                     localArtworkPath: item.extras?['localArtworkPath'] as String?,
+                    audioPath: item.id,
                     size: 45,
                   ),
                   const SizedBox(width: 12),

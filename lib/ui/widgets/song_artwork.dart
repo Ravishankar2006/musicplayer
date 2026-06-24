@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 
 class SongArtwork extends StatelessWidget {
   final int? mediaStoreId;
   final String? localArtworkPath;
+  final String? audioPath;
   final double size;
   final double borderRadius;
 
@@ -12,40 +12,21 @@ class SongArtwork extends StatelessWidget {
     super.key,
     this.mediaStoreId,
     this.localArtworkPath,
-    this.size = 50,
-    this.borderRadius = 8,
+    this.audioPath,
+    this.size = 200,
+    this.borderRadius = 16,
   });
+
+  bool _hasValidArtworkPath() {
+    if (localArtworkPath == null || localArtworkPath!.trim().isEmpty) {
+      return false;
+    }
+    return File(localArtworkPath!).existsSync();
+  }
 
   @override
   Widget build(BuildContext context) {
-    Widget? artwork;
-
-    // 1. Try local extracted artwork (Works on Linux and as fallback on Android)
-    if (localArtworkPath != null) {
-      final file = File(localArtworkPath!);
-      if (file.existsSync()) {
-        artwork = Image.file(
-          file,
-          fit: BoxFit.cover,
-          width: size,
-          height: size,
-          cacheWidth: (size * 2).toInt(), // Optimization
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-        );
-      }
-    }
-
-    // 2. Try MediaStore artwork (Android only)
-    if (artwork == null && Platform.isAndroid && mediaStoreId != null && mediaStoreId! > 0) {
-      artwork = QueryArtworkWidget(
-        id: mediaStoreId!,
-        type: ArtworkType.AUDIO,
-        artworkFit: BoxFit.cover,
-        artworkWidth: size,
-        artworkHeight: size,
-        nullArtworkWidget: _buildPlaceholder(),
-      );
-    }
+    final hasArtwork = _hasValidArtworkPath();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
@@ -53,17 +34,38 @@ class SongArtwork extends StatelessWidget {
         width: size,
         height: size,
         color: Colors.white10,
-        child: artwork ?? _buildPlaceholder(),
+        child: hasArtwork
+            ? Image.file(
+          File(localArtworkPath!),
+          fit: BoxFit.cover,
+          width: size,
+          height: size,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => _buildFallbackArtwork(),
+        )
+            : _buildFallbackArtwork(),
       ),
     );
   }
 
-  Widget _buildPlaceholder() {
-    return Center(
-      child: Icon(
-        Icons.music_note,
-        size: size * 0.5,
-        color: Colors.white24,
+  Widget _buildFallbackArtwork() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1F1F2E),
+            Color(0xFF101014),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.music_note_rounded,
+          size: 90,
+          color: Colors.white24,
+        ),
       ),
     );
   }

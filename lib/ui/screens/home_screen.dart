@@ -56,8 +56,8 @@ class HomeScreen extends ConsumerWidget {
                               height: 70,
                               child: ListTile(
                                 leading: SongArtwork(
-                                  mediaStoreId: song.mediaStoreId,
                                   localArtworkPath: song.localArtworkPath,
+                                  audioPath: song.path,
                                   size: 45,
                                 ),
                                 title: Text(song.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),

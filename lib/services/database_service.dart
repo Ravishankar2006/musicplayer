@@ -28,7 +28,18 @@ class DatabaseService {
 
   Future<void> saveSongs(List<Song> songs) async {
     await isar.writeTxn(() async {
-      await isar.songs.putAll(songs);
+      for (final song in songs) {
+        final existing = await isar.songs
+            .filter()
+            .pathEqualTo(song.path)
+            .findFirst();
+
+        if (existing != null) {
+          song.id = existing.id;
+        }
+
+        await isar.songs.put(song);
+      }
     });
   }
 
@@ -39,6 +50,12 @@ class DatabaseService {
   Future<void> updateSong(Song song) async {
     await isar.writeTxn(() async {
       await isar.songs.put(song);
+    });
+  }
+
+  Future<void> clearSongs() async {
+    await isar.writeTxn(() async {
+      await isar.songs.clear();
     });
   }
 

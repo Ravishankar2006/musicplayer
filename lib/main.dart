@@ -57,7 +57,6 @@ void main() async {
   );
   
   await DatabaseService.instance.init();
-  
   runApp(
     const ProviderScope(
       child: MusicPlayerApp(),
