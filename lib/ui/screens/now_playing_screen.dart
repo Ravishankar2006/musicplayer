@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:musicplayer/providers/music_providers.dart';
@@ -5,17 +6,29 @@ import 'package:musicplayer/ui/widgets/glass_container.dart';
 import 'package:musicplayer/ui/widgets/song_artwork.dart';
 import 'package:musicplayer/ui/widgets/music_waveform.dart';
 
+import '../widgets/player_seek_bar.dart';
+
 class NowPlayingScreen extends ConsumerWidget {
   const NowPlayingScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentItemAsync = ref.watch(currentMediaItemProvider);
     final playbackStateAsync = ref.watch(playbackStateProvider);
 
+    final currentPosition = playbackStateAsync.maybeWhen(
+      data: (state) => state.position,
+      orElse: () => Duration.zero,
+    );
+
+    final totalDuration = currentItemAsync.maybeWhen(
+      data: (item) => item?.duration ?? Duration.zero,
+      orElse: () => Duration.zero,
+    );
+
     return Scaffold(
       body: Stack(
         children: [
-          // Ambient Background (Blurred Album Art placeholder)
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -25,12 +38,10 @@ class NowPlayingScreen extends ConsumerWidget {
               ),
             ),
           ),
-          
           SafeArea(
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                // Top Row
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -40,7 +51,14 @@ class NowPlayingScreen extends ConsumerWidget {
                         icon: const Icon(Icons.keyboard_arrow_down),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      const Text('NOW PLAYING', style: TextStyle(letterSpacing: 2, fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'NOW PLAYING',
+                        style: TextStyle(
+                          letterSpacing: 2,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.more_vert),
                         onPressed: () {},
@@ -48,13 +66,11 @@ class NowPlayingScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                
                 const Spacer(),
-                
-                // Album Art
                 currentItemAsync.when(
                   data: (item) {
-                    final localArtworkPath = item?.extras?['localArtworkPath'] as String?;
+                    final localArtworkPath =
+                    item?.extras?['localArtworkPath'] as String?;
                     final audioPath = item?.id;
 
                     return Center(
@@ -71,35 +87,36 @@ class NowPlayingScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                  const Center(child: CircularProgressIndicator()),
                   error: (e, s) => const Center(child: Icon(Icons.error)),
                 ),
-
                 const SizedBox(height: 40),
-                
-                // Track Info
                 currentItemAsync.when(
                   data: (item) => Column(
                     children: [
                       Text(
                         item?.title ?? 'No Track',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         item?.artist ?? 'Unknown Artist',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white54),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(color: Colors.white54),
                       ),
                     ],
                   ),
                   loading: () => Container(),
                   error: (e, s) => Container(),
                 ),
-                
                 const Spacer(),
-                
-                // Visualizer
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: SizedBox(
@@ -112,10 +129,17 @@ class NowPlayingScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: PlayerSeekBar(
+                    position: currentPosition,
+                    duration: totalDuration,
+                    onSeek: (target) async {
+                      await ref.read(audioHandlerProvider).seek(target);
+                    },
+                  ),
+                ),
                 const SizedBox(height: 20),
-                
-                // Playback Controls Dock
                 Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: AppGlassContainer(
@@ -129,7 +153,8 @@ class NowPlayingScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           icon: const Icon(Icons.skip_previous, size: 36),
-                          onPressed: () => ref.read(audioHandlerProvider).skipToPrevious(),
+                          onPressed: () =>
+                              ref.read(audioHandlerProvider).skipToPrevious(),
                         ),
                         playbackStateAsync.when(
                           data: (state) => GestureDetector(
@@ -142,7 +167,8 @@ class NowPlayingScreen extends ConsumerWidget {
                             },
                             child: CircleAvatar(
                               radius: 30,
-                              backgroundColor: const Color(0xFF00E5FF).withAlpha((0.8 * 255).round()),
+                              backgroundColor: const Color(0xFF00E5FF)
+                                  .withAlpha((0.8 * 255).round()),
                               child: Icon(
                                 state.playing ? Icons.pause : Icons.play_arrow,
                                 color: Colors.black,
@@ -155,11 +181,52 @@ class NowPlayingScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           icon: const Icon(Icons.skip_next, size: 36),
-                          onPressed: () => ref.read(audioHandlerProvider).skipToNext(),
+                          onPressed: () =>
+                              ref.read(audioHandlerProvider).skipToNext(),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.repeat, color: Colors.white54),
-                          onPressed: () {},
+                        playbackStateAsync.when(
+                          data: (state) {
+                            final repeatMode = state.repeatMode;
+
+                            final IconData icon;
+                            final Color color;
+                            final String tooltip;
+
+                            switch (repeatMode) {
+                              case AudioServiceRepeatMode.one:
+                                icon = Icons.repeat_one;
+                                color = const Color(0xFF00E5FF);
+                                tooltip = 'Repeat one';
+                                break;
+                              case AudioServiceRepeatMode.all:
+                                icon = Icons.repeat;
+                                color = const Color(0xFF00E5FF);
+                                tooltip = 'Repeat all';
+                                break;
+                              case AudioServiceRepeatMode.none:
+                              default:
+                                icon = Icons.repeat;
+                                color = Colors.white54;
+                                tooltip = 'Repeat off';
+                                break;
+                            }
+
+                            return IconButton(
+                              tooltip: tooltip,
+                              icon: Icon(icon, color: color),
+                              onPressed: () {
+                                ref.read(audioHandlerProvider).customAction('cycleRepeatMode');
+                              },
+                            );
+                          },
+                          loading: () => IconButton(
+                            icon: const Icon(Icons.repeat, color: Colors.white54),
+                            onPressed: null,
+                          ),
+                          error: (_, __) => IconButton(
+                            icon: const Icon(Icons.repeat, color: Colors.white54),
+                            onPressed: null,
+                          ),
                         ),
                       ],
                     ),

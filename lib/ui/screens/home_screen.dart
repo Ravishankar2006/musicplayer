@@ -5,6 +5,8 @@ import 'package:musicplayer/ui/widgets/glass_container.dart';
 import 'package:musicplayer/ui/widgets/mini_player.dart';
 import 'package:musicplayer/ui/widgets/song_artwork.dart';
 
+import '../../services/audio_handler.dart';
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -62,8 +64,9 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                                 title: Text(song.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                                 subtitle: Text(song.artist ?? 'Unknown Artist', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white54)),
-                                onTap: () {
-                                  ref.read(audioHandlerProvider).playSong(song);
+                                onTap: () async {
+                                  final handler = ref.read(audioHandlerProvider);
+                                  await handler.playQueueAtIndex(songs, index);
                                 },
                               ),
                             ),
