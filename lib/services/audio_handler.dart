@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:musicplayer/models/song.dart';
+import 'dart:io' show Platform;
 
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -21,6 +22,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
   AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
   AudioServiceShuffleMode _shuffleMode = AudioServiceShuffleMode.none;
+
+  List<MediaItem> _originalQueue = [];
+  List<MediaItem> _shuffledQueue = [];
 
   Future<void> cycleRepeatMode() async {
     switch (_repeatMode) {
@@ -129,7 +133,19 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
       final source = sequence[index];
       final item = source.tag as MediaItem?;
-      if (item != null) {
+      if (item == null) return;
+
+      final current = mediaItem.value;
+
+      if (current != null && current.id == item.id) {
+        mediaItem.add(
+          item.copyWith(
+            duration: (current.duration != null && current.duration! > Duration.zero)
+                ? current.duration
+                : item.duration,
+          ),
+        );
+      } else {
         mediaItem.add(item);
       }
     });
@@ -196,6 +212,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       );
     }).toList();
 
+    _originalQueue = List<MediaItem>.from(mediaItems);
+
     queue.add(mediaItems);
 
     final playlist = ConcatenatingAudioSource(
@@ -244,6 +262,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       );
     }).toList();
 
+    _originalQueue = List<MediaItem>.from(mediaItems);
     queue.add(mediaItems);
 
     final playlist = ConcatenatingAudioSource(
@@ -306,19 +325,99 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
     _shuffleMode = shuffleMode;
 
-    if (shuffleMode == AudioServiceShuffleMode.all) {
-      await _player.shuffle();
-      await _player.setShuffleModeEnabled(true);
+    if (Platform.isLinux) {
+      await _setLinuxShuffleMode(shuffleMode);
     } else {
-      await _player.setShuffleModeEnabled(false);
+      if (shuffleMode == AudioServiceShuffleMode.all) {
+        await _player.shuffle();
+        await _player.setShuffleModeEnabled(true);
+      } else {
+        await _player.setShuffleModeEnabled(false);
+      }
     }
 
     playbackState.add(
       playbackState.value.copyWith(
-        shuffleMode: _shuffleMode,
-        repeatMode: _repeatMode,
+        shuffleMode: shuffleMode,
       ),
     );
+  }
+
+  Future<void> _setLinuxShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    final currentItem = mediaItem.value;
+    final currentQueue = List<MediaItem>.from(_originalQueue);
+
+    if (currentQueue.isEmpty) return;
+
+    if (shuffleMode == AudioServiceShuffleMode.all) {
+      final shuffled = List<MediaItem>.from(currentQueue);
+      shuffled.shuffle();
+
+      if (currentItem != null) {
+        final currentIndex = shuffled.indexWhere((item) => item.id == currentItem.id);
+        if (currentIndex > 0) {
+          final current = shuffled.removeAt(currentIndex);
+          shuffled.insert(0, current);
+        }
+      }
+
+      _shuffledQueue = shuffled;
+      queue.add(shuffled);
+      await _rebuildPlaylistFromQueue(shuffled, startFromFirst: true);
+    } else {
+      queue.add(currentQueue);
+
+      int restoreIndex = 0;
+      if (currentItem != null) {
+        restoreIndex = currentQueue.indexWhere((item) => item.id == currentItem.id);
+        if (restoreIndex < 0) restoreIndex = 0;
+      }
+
+      await _rebuildPlaylistFromQueue(currentQueue, startIndex: restoreIndex);
+    }
+  }
+
+  Future<void> _rebuildPlaylistFromQueue(
+      List<MediaItem> items, {
+        bool startFromFirst = false,
+        int startIndex = 0,
+      }) async {
+
+    final current = mediaItem.value;
+
+    final audioSources = items.map((item) {
+      final taggedItem =
+      current != null &&
+          current.id == item.id &&
+          current.duration != null &&
+          current.duration! > Duration.zero
+          ? item.copyWith(duration: current.duration)
+          : item;
+
+      return AudioSource.file(
+        item.id,
+        tag: taggedItem,
+      );
+    }).toList();
+
+    final wasPlaying = _player.playing;
+    final currentPosition = _player.position;
+
+    final resolvedIndex =
+    (startFromFirst ? 0 : startIndex).clamp(0, items.length - 1);
+
+    await _player.setAudioSource(
+      ConcatenatingAudioSource(children: audioSources),
+      initialIndex: resolvedIndex,
+      initialPosition: startFromFirst ? Duration.zero : currentPosition,
+    );
+
+    if (wasPlaying) {
+      await _player.play();
+    }
+
+    final resolvedItem = audioSources[resolvedIndex].tag as MediaItem;
+    mediaItem.add(resolvedItem);
   }
 
   Future<void> disposePlayer() async {
