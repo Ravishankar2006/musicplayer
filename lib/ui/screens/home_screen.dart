@@ -56,18 +56,30 @@ class HomeScreen extends ConsumerWidget {
                             child: AppGlassContainer(
                               borderRadius: 15,
                               height: 70,
-                              child: ListTile(
-                                leading: SongArtwork(
-                                  localArtworkPath: song.localArtworkPath,
-                                  audioPath: song.path,
-                                  size: 45,
+
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: ListTile(
+                                  leading: SongArtwork(
+                                    localArtworkPath: song.localArtworkPath,
+                                    audioPath: song.path,
+                                    size: 45,
+                                  ),
+                                  title: Text(
+                                    song.title,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                  ),
+                                  subtitle: Text(
+                                    song.artist ?? 'Unknown Artist',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, color: Colors.white54),
+                                  ),
+                                  onTap: () async {
+                                    final handler = ref.read(audioHandlerProvider);
+                                    await handler.playQueueAtIndex(songs, index);
+                                  },
                                 ),
-                                title: Text(song.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                                subtitle: Text(song.artist ?? 'Unknown Artist', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white54)),
-                                onTap: () async {
-                                  final handler = ref.read(audioHandlerProvider);
-                                  await handler.playQueueAtIndex(songs, index);
-                                },
                               ),
                             ),
                           );

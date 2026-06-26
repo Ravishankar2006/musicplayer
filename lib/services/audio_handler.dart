@@ -20,6 +20,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   }
 
   AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
+  AudioServiceShuffleMode _shuffleMode = AudioServiceShuffleMode.none;
 
   Future<void> cycleRepeatMode() async {
     switch (_repeatMode) {
@@ -43,6 +44,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     playbackState.add(
       playbackState.value.copyWith(
         repeatMode: _repeatMode,
+        shuffleMode: _shuffleMode,
       ),
     );
   }
@@ -77,6 +79,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           speed: _player.speed,
           queueIndex: event.currentIndex,
           repeatMode: _repeatMode,
+          shuffleMode: _shuffleMode,
         ),
       );
     });
@@ -97,6 +100,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
             ProcessingState.ready: AudioProcessingState.ready,
             ProcessingState.completed: AudioProcessingState.completed,
           }[_player.processingState]!,
+          repeatMode: _repeatMode,
+          shuffleMode: _shuffleMode,
         ),
       );
     });
@@ -104,8 +109,12 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
   void _listenToDurationChanges() {
     _durationSub = _player.durationStream.listen((duration) {
+      if (duration == null) return;
+
       final current = mediaItem.value;
-      if (current != null && duration != null && current.duration != duration) {
+      if (current == null) return;
+
+      if (current.duration != duration) {
         mediaItem.add(current.copyWith(duration: duration));
       }
     });
@@ -113,9 +122,15 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
   void _listenToCurrentIndexChanges() {
     _currentIndexSub = _player.currentIndexStream.listen((index) {
-      final currentQueue = queue.value;
-      if (index != null && index >= 0 && index < currentQueue.length) {
-        mediaItem.add(currentQueue[index]);
+      if (index == null) return;
+
+      final sequence = _player.sequence;
+      if (sequence == null || index < 0 || index >= sequence.length) return;
+
+      final source = sequence[index];
+      final item = source.tag as MediaItem?;
+      if (item != null) {
+        mediaItem.add(item);
       }
     });
   }
@@ -165,9 +180,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   }
 
   Future<void> setQueue(List<Song> songs) async {
-    final mediaItems = songs
-        .map(
-          (song) => MediaItem(
+    final mediaItems = songs.map((song) {
+      return MediaItem(
         id: song.path,
         album: song.album ?? 'Unknown Album',
         title: song.title,
@@ -179,21 +193,18 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           'mediaStoreId': song.mediaStoreId,
           'localArtworkPath': song.localArtworkPath,
         },
-      ),
-    )
-        .toList();
+      );
+    }).toList();
 
     queue.add(mediaItems);
 
     final playlist = ConcatenatingAudioSource(
-      children: mediaItems
-          .map(
-            (item) => AudioSource.file(
+      children: mediaItems.map((item) {
+        return AudioSource.file(
           item.id,
           tag: item,
-        ),
-      )
-          .toList(),
+        );
+      }).toList(),
     );
 
     await _player.setAudioSource(playlist);
@@ -204,29 +215,12 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           ? LoopMode.all
           : LoopMode.off,
     );
-  }
 
-  @override
-  Future<void> onTaskRemoved() async {
-    await stop();
-  }
-
-  Future<void> disposePlayer() async {
-    await _playbackEventSub?.cancel();
-    await _positionSub?.cancel();
-    await _durationSub?.cancel();
-    await _currentIndexSub?.cancel();
-    await _player.dispose();
-  }
-
-  @override
-  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async {
-    switch (name) {
-      case 'cycleRepeatMode':
-        await cycleRepeatMode();
-        return null;
-      default:
-        return super.customAction(name, extras);
+    if (_shuffleMode == AudioServiceShuffleMode.all) {
+      await _player.shuffle();
+      await _player.setShuffleModeEnabled(true);
+    } else {
+      await _player.setShuffleModeEnabled(false);
     }
   }
 
@@ -270,14 +264,68 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           : LoopMode.off,
     );
 
+    if (_shuffleMode == AudioServiceShuffleMode.all) {
+      await _player.shuffle();
+      await _player.setShuffleModeEnabled(true);
+    } else {
+      await _player.setShuffleModeEnabled(false);
+    }
+
     await _player.seek(Duration.zero, index: startIndex);
-    mediaItem.add(mediaItems[startIndex]);
+
+    var selectedItem = mediaItems[startIndex];
+    final playerDuration = _player.duration;
+    if (playerDuration != null && playerDuration > Duration.zero) {
+      selectedItem = selectedItem.copyWith(duration: playerDuration);
+    }
+
     await _player.play();
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      final duration = _player.duration;
+      final current = mediaItem.value;
+
+      if (duration != null && duration > Duration.zero && current != null) {
+        mediaItem.add(current.copyWith(duration: duration));
+      }
+    });
   }
 
   @override
   Future<void> skipToQueueItem(int index) async {
     if (index < 0 || index >= queue.value.length) return;
     await _player.seek(Duration.zero, index: index);
+  }
+
+  @override
+  Future<void> onTaskRemoved() async {
+    await stop();
+  }
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    _shuffleMode = shuffleMode;
+
+    if (shuffleMode == AudioServiceShuffleMode.all) {
+      await _player.shuffle();
+      await _player.setShuffleModeEnabled(true);
+    } else {
+      await _player.setShuffleModeEnabled(false);
+    }
+
+    playbackState.add(
+      playbackState.value.copyWith(
+        shuffleMode: _shuffleMode,
+        repeatMode: _repeatMode,
+      ),
+    );
+  }
+
+  Future<void> disposePlayer() async {
+    await _playbackEventSub?.cancel();
+    await _positionSub?.cancel();
+    await _durationSub?.cancel();
+    await _currentIndexSub?.cancel();
+    await _player.dispose();
   }
 }

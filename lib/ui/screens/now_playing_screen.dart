@@ -16,15 +16,17 @@ class NowPlayingScreen extends ConsumerWidget {
     final currentItemAsync = ref.watch(currentMediaItemProvider);
     final playbackStateAsync = ref.watch(playbackStateProvider);
 
-    final currentPosition = playbackStateAsync.maybeWhen(
-      data: (state) => state.position,
-      orElse: () => Duration.zero,
+    final playbackState = playbackStateAsync.maybeWhen(
+      data: (state) => state,
+      orElse: () => null,
     );
 
+    final currentPosition = playbackState?.position ?? Duration.zero;
+
     final totalDuration = currentItemAsync.maybeWhen(
-      data: (item) => item?.duration ?? Duration.zero,
-      orElse: () => Duration.zero,
-    );
+      data: (item) => item?.duration,
+      orElse: () => null,
+    ) ?? Duration.zero;
 
     return Scaffold(
       body: Stack(
@@ -147,9 +149,36 @@ class NowPlayingScreen extends ConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.shuffle, color: Colors.white54),
-                          onPressed: () {},
+                        playbackStateAsync.when(
+                          data: (state) {
+                            final isShuffleOn = state.shuffleMode == AudioServiceShuffleMode.all;
+
+                            return IconButton(
+                              tooltip: isShuffleOn ? 'Shuffle on' : 'Shuffle off',
+                              icon: Icon(
+                                Icons.shuffle,
+                                color: isShuffleOn ? const Color(0xFF00E5FF) : Colors.white54,
+                              ),
+                              onPressed: () async {
+                                final handler = ref.read(audioHandlerProvider);
+                                final current = state.shuffleMode;
+
+                                await handler.setShuffleMode(
+                                  current == AudioServiceShuffleMode.all
+                                      ? AudioServiceShuffleMode.none
+                                      : AudioServiceShuffleMode.all,
+                                );
+                              },
+                            );
+                          },
+                          loading: () => IconButton(
+                            icon: const Icon(Icons.shuffle, color: Colors.white54),
+                            onPressed: null,
+                          ),
+                          error: (_, __) => IconButton(
+                            icon: const Icon(Icons.shuffle, color: Colors.white54),
+                            onPressed: null,
+                          ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.skip_previous, size: 36),
