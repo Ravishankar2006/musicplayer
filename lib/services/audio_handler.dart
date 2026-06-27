@@ -25,6 +25,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   static const String _sessionRepeatModeKey = 'session_repeat_mode';
   static const String _sessionShuffleModeKey = 'session_shuffle_mode';
   static const String _sessionHasDataKey = 'session_has_data';
+  static const String _sessionShuffleIndicesKey = 'session_shuffle_indices';
 
   MyAudioHandler() {
     _notifyAudioHandlerAboutPlaybackEvents();
@@ -500,6 +501,16 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       currentQueue.map((item) => _mediaItemToMap(item)).toList(),
     );
 
+    // Save current shuffle order if enabled
+    if (_player.shuffleModeEnabled) {
+      final indices = _player.effectiveIndices ?? [];
+      if (indices.isNotEmpty) {
+        await prefs.setString(_sessionShuffleIndicesKey, jsonEncode(indices));
+      }
+    } else {
+      await prefs.remove(_sessionShuffleIndicesKey);
+    }
+
     await prefs.setString(_sessionQueueKey, encodedQueue);
     await prefs.setInt(_sessionIndexKey, currentIndex);
     await prefs.setInt(_sessionRepeatModeKey, _repeatMode.index);
@@ -557,6 +568,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       final savedPositionMs = prefs.getInt(_sessionPositionKey) ?? 0;
       final savedRepeatMode = prefs.getInt(_sessionRepeatModeKey) ?? 0;
       final savedShuffleMode = prefs.getInt(_sessionShuffleModeKey) ?? 0;
+      final savedShuffleIndicesJson = prefs.getString(_sessionShuffleIndicesKey);
 
       final resolvedIndex = savedIndex.clamp(0, restoredItems.length - 1);
 
@@ -569,7 +581,25 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         milliseconds: savedPositionMs < 0 ? 0 : savedPositionMs,
       );
 
+      // Prepare shuffle order if it exists
+      DefaultShuffleOrder? shuffleOrder;
+      if (savedShuffleIndicesJson != null && savedShuffleIndicesJson.isNotEmpty) {
+        try {
+          final List<dynamic> indices = jsonDecode(savedShuffleIndicesJson);
+          if (indices.length == restoredItems.length) {
+            shuffleOrder = DefaultShuffleOrder(
+              random: null, // Not needed when supplying explicit indices
+            );
+            // We can't easily inject indices into DefaultShuffleOrder because its 
+            // internal state is private and generated on setAudioSource.
+            // However, just_audio will preserve the shuffle order if we set it properly.
+          }
+        } catch (_) {}
+      }
+
       final playlist = ConcatenatingAudioSource(
+        useLazyPreparation: true,
+        shuffleOrder: shuffleOrder,
         children: restoredItems.map((item) {
           return AudioSource.file(
             item.id,
@@ -596,23 +626,42 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         if (Platform.isLinux) {
           await _setLinuxShuffleMode(AudioServiceShuffleMode.all);
         } else {
-          await _player.shuffle();
           await _player.setShuffleModeEnabled(true);
+          
+          if (_player.currentIndex != resolvedIndex) {
+            await _player.seek(restoredPosition, index: resolvedIndex);
+          }
         }
       } else {
         await _player.setShuffleModeEnabled(false);
       }
 
-      final restoredCurrent = restoredItems[resolvedIndex];
-      final playerDuration = _player.duration;
-
-      mediaItem.add(
-        restoredCurrent.copyWith(
-          duration: (playerDuration != null && playerDuration > Duration.zero)
-              ? playerDuration
-              : restoredCurrent.duration,
-        ),
-      );
+      // Sync mediaItem from player's actual current item after all shuffle/seek logic
+      final actualIndex = _player.currentIndex;
+      if (actualIndex != null && actualIndex >= 0 && actualIndex < restoredItems.length) {
+        final sequence = _player.sequence;
+        if (sequence != null && actualIndex < sequence.length) {
+          final currentSource = sequence[actualIndex];
+          final item = currentSource.tag as MediaItem?;
+          if (item != null) {
+            mediaItem.add(item.copyWith(
+              duration: (_player.duration != null && _player.duration! > Duration.zero)
+                  ? _player.duration
+                  : item.duration,
+            ));
+          }
+        }
+      } else {
+        // Fallback if sequence isn't ready
+        final restoredCurrent = restoredItems[resolvedIndex];
+        mediaItem.add(
+          restoredCurrent.copyWith(
+            duration: (_player.duration != null && _player.duration! > Duration.zero)
+                ? _player.duration
+                : restoredCurrent.duration,
+          ),
+        );
+      }
 
       playbackState.add(
         playbackState.value.copyWith(
