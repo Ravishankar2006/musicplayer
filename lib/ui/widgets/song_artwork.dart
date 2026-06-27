@@ -41,7 +41,7 @@ class SongArtwork extends StatelessWidget {
           width: size,
           height: size,
           gaplessPlayback: true,
-          errorBuilder: (_, __, ___) => _buildFallbackArtwork(),
+          errorBuilder: (_, _, _) => _buildFallbackArtwork(),
         )
             : _buildFallbackArtwork(),
       ),

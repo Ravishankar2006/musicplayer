@@ -20,7 +20,7 @@ dependencies:
 
   # Metadata & Querying
   on_audio_query: ^2.9.0
-  audiotags: ^1.4.5
+  flutter_media_metadata: ^1.0.0+1
   path_provider: ^2.1.2
   file_picker: ^8.1.0
   permission_handler: ^11.3.1
@@ -33,6 +33,7 @@ dependencies:
   # Database
   isar: ^3.1.0+1
   isar_flutter_libs: ^3.1.0+1
+  shared_preferences: ^2.5.3
 
   # UI & Effects
   glass_kit: ^4.0.2

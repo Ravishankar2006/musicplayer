@@ -26,42 +26,54 @@ subprojects {
         try {
             val compilerOptions = task.javaClass.getMethod("getCompilerOptions").invoke(task)
             val jvmTarget = compilerOptions.javaClass.getMethod("getJvmTarget").invoke(compilerOptions)
-            jvmTarget.javaClass.getMethod("set", org.jetbrains.kotlin.gradle.dsl.JvmTarget::class.java).invoke(jvmTarget, org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+            jvmTarget.javaClass.getMethod("set", org.jetbrains.kotlin.gradle.dsl.JvmTarget::class.java).invoke(jvmTarget, org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         } catch (e: Exception) {
             try {
                 val kotlinOptions = task.javaClass.getMethod("getKotlinOptions").invoke(task)
-                kotlinOptions.javaClass.getMethod("setJvmTarget", String::class.java).invoke(kotlinOptions, "11")
+                kotlinOptions.javaClass.getMethod("setJvmTarget", String::class.java).invoke(kotlinOptions, "17")
             } catch (e2: Exception) {}
         }
     }
     
     tasks.withType<JavaCompile>().configureEach {
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
+}
 
-    // Configure Android projects
-    listOf("com.android.application", "com.android.library").forEach { pluginId ->
-        plugins.withId(pluginId) {
-            val android = extensions.getByName("android")
+// Global configuration for Android projects
+allprojects {
+    plugins.whenPluginAdded {
+        val plugin = this
+        if (plugin.javaClass.name.contains("com.android.build.gradle.AppPlugin") || 
+            plugin.javaClass.name.contains("com.android.build.gradle.LibraryPlugin")) {
             
-            // Force compileSdk to 36
-            try {
-                android.javaClass.getMethod("setCompileSdk", Int::class.java).invoke(android, 36)
-            } catch (e1: Exception) {
+            project.extensions.findByName("android")?.let { android ->
+                // Force compileSdk to 36
                 try {
-                    android.javaClass.getMethod("setCompileSdkVersion", Object::class.java).invoke(android, "android-36")
-                } catch (e2: Exception) {}
-            }
-
-            // Fix namespaces
-            try {
-                val getNamespace = android.javaClass.getMethod("getNamespace")
-                val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
-                if (getNamespace.invoke(android) == null) {
-                    setNamespace.invoke(android, project.group.toString())
+                    android.javaClass.getMethod("setCompileSdk", Int::class.java).invoke(android, 36)
+                } catch (e1: Exception) {
+                    try {
+                        android.javaClass.getMethod("setCompileSdkVersion", Object::class.java).invoke(android, "android-36")
+                    } catch (e2: Exception) {}
                 }
-            } catch (e: Exception) {}
+
+                // Force Java compatibility to 17
+                try {
+                    val compileOptions = android.javaClass.getMethod("getCompileOptions").invoke(android)
+                    compileOptions.javaClass.getMethod("setSourceCompatibility", Object::class.java).invoke(compileOptions, JavaVersion.VERSION_17)
+                    compileOptions.javaClass.getMethod("setTargetCompatibility", Object::class.java).invoke(compileOptions, JavaVersion.VERSION_17)
+                } catch (e: Exception) {}
+
+                // Fix missing namespaces
+                try {
+                    val getNamespace = android.javaClass.getMethod("getNamespace")
+                    val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
+                    if (getNamespace.invoke(android) == null) {
+                        setNamespace.invoke(android, project.group.toString())
+                    }
+                } catch (e: Exception) {}
+            }
         }
     }
 }

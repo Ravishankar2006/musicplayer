@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:audiotags/audiotags.dart';
 import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_media_metadata/flutter_media_metadata.dart';
 import 'package:musicplayer/models/song.dart';
 import 'package:musicplayer/services/database_service.dart';
 import 'package:path/path.dart' as p;
@@ -62,30 +62,22 @@ class MusicScanner {
     }
 
     for (final file in audioFiles) {
-      Tag? tag;
+      Metadata? metadata;
       String? localArtPath;
 
       try {
-        tag = await AudioTags.read(file.path);
-        debugPrint('Scanning: ${file.path}');
-        debugPrint('Pictures count: ${tag?.pictures?.length ?? 0}');
+        metadata = await MetadataRetriever.fromFile(file);
+        
+        final albumArt = metadata.albumArt;
+        if (albumArt != null && albumArt.isNotEmpty) {
+          final hash = _generateFileHash(file.path);
+          final artFile = File('${artworkDir.path}/$hash.jpg');
 
-        final pictures = tag?.pictures;
-        if (pictures != null && pictures.isNotEmpty) {
-          final bytes = pictures.first.bytes;
-          if (bytes.isNotEmpty) {
-            final hash = _generateFileHash(file.path);
-            final artFile = File('${artworkDir.path}/$hash.jpg');
-
-            if (!artFile.existsSync()) {
-              await artFile.writeAsBytes(bytes);
-              debugPrint('Saved artwork to: ${artFile.path}');
-            }
-
-            localArtPath = artFile.path;
+          if (!artFile.existsSync()) {
+            await artFile.writeAsBytes(albumArt);
           }
-        } else {
-          debugPrint('No embedded artwork for: ${file.path}');
+
+          localArtPath = artFile.path;
         }
       } catch (e) {
         debugPrint('Metadata error for ${file.path}: $e');
@@ -94,21 +86,19 @@ class MusicScanner {
       songsToSave.add(
         Song(
           path: file.path,
-          title: (tag?.title != null && tag!.title!.trim().isNotEmpty)
-              ? tag.title!
+          title: (metadata?.trackName != null && metadata!.trackName!.trim().isNotEmpty)
+              ? metadata.trackName!
               : p.basenameWithoutExtension(file.path),
-          artist: (tag?.trackArtist != null && tag!.trackArtist!.trim().isNotEmpty)
-              ? tag.trackArtist!
+          artist: (metadata?.trackArtistNames != null && metadata!.trackArtistNames!.isNotEmpty)
+              ? metadata.trackArtistNames!.join(', ')
               : 'Unknown Artist',
-          album: (tag?.album != null && tag!.album!.trim().isNotEmpty)
-              ? tag.album!
+          album: (metadata?.albumName != null && metadata!.albumName!.trim().isNotEmpty)
+              ? metadata.albumName!
               : 'Unknown Album',
-          duration: tag?.duration,
+          duration: metadata?.trackDuration,
           size: await file.length(),
           dateAdded: DateTime.now(),
-          trackNumber: tag?.trackNumber,
-          discNumber: tag?.discNumber,
-          genre: tag?.genre,
+          trackNumber: metadata?.trackNumber,
           localArtworkPath: localArtPath,
         ),
       );

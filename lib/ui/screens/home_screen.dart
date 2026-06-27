@@ -5,7 +5,6 @@ import 'package:musicplayer/ui/widgets/glass_container.dart';
 import 'package:musicplayer/ui/widgets/mini_player.dart';
 import 'package:musicplayer/ui/widgets/song_artwork.dart';
 
-import '../../services/audio_handler.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

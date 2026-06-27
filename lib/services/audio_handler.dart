@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:musicplayer/models/song.dart';
-import 'dart:io' show Platform;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io' show Platform, File;
 
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -13,11 +15,23 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<int?>? _currentIndexSub;
 
+  SharedPreferences? _prefs;
+  Timer? _positionSaveTimer;
+  bool _isRestoringSession = false;
+
+  static const String _sessionQueueKey = 'session_queue';
+  static const String _sessionIndexKey = 'session_index';
+  static const String _sessionPositionKey = 'session_position';
+  static const String _sessionRepeatModeKey = 'session_repeat_mode';
+  static const String _sessionShuffleModeKey = 'session_shuffle_mode';
+  static const String _sessionHasDataKey = 'session_has_data';
+
   MyAudioHandler() {
     _notifyAudioHandlerAboutPlaybackEvents();
     _listenToPositionChanges();
     _listenToDurationChanges();
     _listenToCurrentIndexChanges();
+    _initSessionRestore();
   }
 
   AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
@@ -25,6 +39,11 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
   List<MediaItem> _originalQueue = [];
   List<MediaItem> _shuffledQueue = [];
+
+  Future<void> _initSessionRestore() async {
+    _prefs = await SharedPreferences.getInstance();
+    await _restoreSession();
+  }
 
   Future<void> cycleRepeatMode() async {
     switch (_repeatMode) {
@@ -51,6 +70,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         shuffleMode: _shuffleMode,
       ),
     );
+
+    await _saveSession();
   }
 
   void _notifyAudioHandlerAboutPlaybackEvents() {
@@ -108,6 +129,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           shuffleMode: _shuffleMode,
         ),
       );
+      if (_player.playing) {
+        _schedulePositionSave();
+      }
     });
   }
 
@@ -155,13 +179,19 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> play() => _player.play();
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() async {
+    await _player.pause();
+    await _saveSession();
+    await _savePosition();
+  }
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
   Future<void> stop() async {
+    await _saveSession();
+    await _savePosition();
     await _player.stop();
     return super.stop();
   }
@@ -240,6 +270,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     } else {
       await _player.setShuffleModeEnabled(false);
     }
+
+    await _saveSession();
+    await _savePosition();
   }
 
   Future<void> playQueueAtIndex(List<Song> songs, int startIndex) async {
@@ -308,6 +341,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         mediaItem.add(current.copyWith(duration: duration));
       }
     });
+
+    await _saveSession();
+    await _savePosition();
   }
 
   @override
@@ -341,6 +377,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         shuffleMode: shuffleMode,
       ),
     );
+
+    await _saveSession();
+    await _savePosition();
   }
 
   Future<void> _setLinuxShuffleMode(AudioServiceShuffleMode shuffleMode) async {
@@ -420,11 +459,182 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     mediaItem.add(resolvedItem);
   }
 
+  Map<String, dynamic> _mediaItemToMap(MediaItem item) {
+    return {
+      'id': item.id,
+      'album': item.album,
+      'title': item.title,
+      'artist': item.artist,
+      'duration': item.duration?.inMilliseconds,
+      'extras': item.extras,
+    };
+  }
+
+  MediaItem _mediaItemFromMap(Map<String, dynamic> map) {
+    return MediaItem(
+      id: map['id'] as String,
+      album: map['album'] as String?,
+      title: map['title'] as String? ?? 'Unknown Title',
+      artist: map['artist'] as String?,
+      duration: map['duration'] != null
+          ? Duration(milliseconds: map['duration'] as int)
+          : Duration.zero,
+      extras: map['extras'] != null
+          ? Map<String, dynamic>.from(map['extras'] as Map)
+          : null,
+    );
+  }
+
+  Future<void> _saveSession() async {
+    final prefs = _prefs;
+    if (prefs == null || _isRestoringSession) return;
+
+    final currentQueue = queue.value;
+    if (currentQueue.isEmpty) {
+      await prefs.setBool(_sessionHasDataKey, false);
+      return;
+    }
+
+    final currentIndex = _player.currentIndex ?? 0;
+    final encodedQueue = jsonEncode(
+      currentQueue.map((item) => _mediaItemToMap(item)).toList(),
+    );
+
+    await prefs.setString(_sessionQueueKey, encodedQueue);
+    await prefs.setInt(_sessionIndexKey, currentIndex);
+    await prefs.setInt(_sessionRepeatModeKey, _repeatMode.index);
+    await prefs.setInt(_sessionShuffleModeKey, _shuffleMode.index);
+    await prefs.setBool(_sessionHasDataKey, true);
+  }
+
+  Future<void> _savePosition() async {
+    final prefs = _prefs;
+    if (prefs == null || _isRestoringSession) return;
+
+    await prefs.setInt(
+      _sessionPositionKey,
+      _player.position.inMilliseconds,
+    );
+  }
+
+  void _schedulePositionSave() {
+    if (_isRestoringSession) return;
+
+    _positionSaveTimer?.cancel();
+    _positionSaveTimer = Timer(const Duration(seconds: 2), () {
+      _savePosition();
+    });
+  }
+
+  Future<void> _restoreSession() async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+
+    final hasData = prefs.getBool(_sessionHasDataKey) ?? false;
+    if (!hasData) return;
+
+    final queueJson = prefs.getString(_sessionQueueKey);
+    if (queueJson == null || queueJson.isEmpty) return;
+
+    _isRestoringSession = true;
+
+    try {
+      final decoded = jsonDecode(queueJson) as List<dynamic>;
+      final restoredItems = decoded
+          .map((e) => _mediaItemFromMap(Map<String, dynamic>.from(e as Map)))
+          .where((item) => File(item.id).existsSync())
+          .toList();
+
+      if (restoredItems.isEmpty) {
+        await prefs.setBool(_sessionHasDataKey, false);
+        return;
+      }
+
+      _originalQueue = List<MediaItem>.from(restoredItems);
+      queue.add(restoredItems);
+
+      final savedIndex = prefs.getInt(_sessionIndexKey) ?? 0;
+      final savedPositionMs = prefs.getInt(_sessionPositionKey) ?? 0;
+      final savedRepeatMode = prefs.getInt(_sessionRepeatModeKey) ?? 0;
+      final savedShuffleMode = prefs.getInt(_sessionShuffleModeKey) ?? 0;
+
+      final resolvedIndex = savedIndex.clamp(0, restoredItems.length - 1);
+
+      _repeatMode = AudioServiceRepeatMode.values[
+      savedRepeatMode.clamp(0, AudioServiceRepeatMode.values.length - 1)];
+      _shuffleMode = AudioServiceShuffleMode.values[
+      savedShuffleMode.clamp(0, AudioServiceShuffleMode.values.length - 1)];
+
+      final restoredPosition = Duration(
+        milliseconds: savedPositionMs < 0 ? 0 : savedPositionMs,
+      );
+
+      final playlist = ConcatenatingAudioSource(
+        children: restoredItems.map((item) {
+          return AudioSource.file(
+            item.id,
+            tag: item,
+          );
+        }).toList(),
+      );
+
+      await _player.setAudioSource(
+        playlist,
+        initialIndex: resolvedIndex,
+        initialPosition: restoredPosition,
+      );
+
+      await _player.setLoopMode(
+        _repeatMode == AudioServiceRepeatMode.one
+            ? LoopMode.one
+            : _repeatMode == AudioServiceRepeatMode.all
+            ? LoopMode.all
+            : LoopMode.off,
+      );
+
+      if (_shuffleMode == AudioServiceShuffleMode.all) {
+        if (Platform.isLinux) {
+          await _setLinuxShuffleMode(AudioServiceShuffleMode.all);
+        } else {
+          await _player.shuffle();
+          await _player.setShuffleModeEnabled(true);
+        }
+      } else {
+        await _player.setShuffleModeEnabled(false);
+      }
+
+      final restoredCurrent = restoredItems[resolvedIndex];
+      final playerDuration = _player.duration;
+
+      mediaItem.add(
+        restoredCurrent.copyWith(
+          duration: (playerDuration != null && playerDuration > Duration.zero)
+              ? playerDuration
+              : restoredCurrent.duration,
+        ),
+      );
+
+      playbackState.add(
+        playbackState.value.copyWith(
+          repeatMode: _repeatMode,
+          shuffleMode: _shuffleMode,
+        ),
+      );
+    } catch (_) {
+      await prefs.setBool(_sessionHasDataKey, false);
+    } finally {
+      _isRestoringSession = false;
+    }
+  }
+
   Future<void> disposePlayer() async {
     await _playbackEventSub?.cancel();
     await _positionSub?.cancel();
     await _durationSub?.cancel();
     await _currentIndexSub?.cancel();
+    _positionSaveTimer?.cancel();
+    await _saveSession();
+    await _savePosition();
     await _player.dispose();
   }
 }
