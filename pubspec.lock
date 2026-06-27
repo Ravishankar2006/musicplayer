@@ -49,6 +49,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.13.1"
+  audio_info:
+    dependency: "direct main"
+    description:
+      name: audio_info
+      sha256: "642fa74d96c57662a689489b11480dcdc7aa5fd8134e25a02b6e7fa7ea44b458"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.6"
   audio_service:
     dependency: "direct main"
     description:
@@ -326,14 +334,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
-  flutter_media_metadata:
-    dependency: "direct main"
-    description:
-      name: flutter_media_metadata
-      sha256: "69cfc76ffd6cd5d546dcc4880584b3844c5e879e435aa54f57f1096c15bd04db"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.0+1"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:

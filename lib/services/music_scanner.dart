@@ -1,18 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:audio_info/audio_info.dart';
 import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_media_metadata/flutter_media_metadata.dart';
 import 'package:musicplayer/models/song.dart';
 import 'package:musicplayer/services/database_service.dart';
+import 'package:on_audio_query/on_audio_query.dart' as oaq;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class MusicScanner {
   final DatabaseService _dbService;
+  final oaq.OnAudioQuery _audioQuery = oaq.OnAudioQuery();
 
   MusicScanner(this._dbService);
 
@@ -61,44 +63,74 @@ class MusicScanner {
       artworkDir.createSync(recursive: true);
     }
 
+    // Pre-query all device songs for matching IDs (Android only)
+    List<oaq.SongModel> allDeviceSongs = [];
+    if (Platform.isAndroid) {
+      try {
+        allDeviceSongs = await _audioQuery.querySongs(
+          uriType: oaq.UriType.EXTERNAL,
+          ignoreCase: true,
+        );
+      } catch (e) {}
+    }
+
     for (final file in audioFiles) {
-      Metadata? metadata;
+      AudioData? info;
       String? localArtPath;
 
       try {
-        metadata = await MetadataRetriever.fromFile(file);
+        info = await AudioInfo.getAudioInfo(file.path);
         
-        final albumArt = metadata.albumArt;
-        if (albumArt != null && albumArt.isNotEmpty) {
-          final hash = _generateFileHash(file.path);
-          final artFile = File('${artworkDir.path}/$hash.jpg');
+        if (info != null && info.hasArtwork == true) {
+          final albumArt = await AudioInfo.getAudioImage(file.path);
+          if (albumArt != null && albumArt.isNotEmpty) {
+            final hash = _generateFileHash(file.path);
+            final artFile = File('${artworkDir.path}/$hash.jpg');
 
-          if (!artFile.existsSync()) {
-            await artFile.writeAsBytes(albumArt);
+            if (!artFile.existsSync()) {
+              await artFile.writeAsBytes(albumArt);
+            }
+
+            localArtPath = artFile.path;
           }
-
-          localArtPath = artFile.path;
         }
       } catch (e) {
         debugPrint('Metadata error for ${file.path}: $e');
       }
 
+      int? mediaStoreId;
+      if (Platform.isAndroid) {
+        final normalizedPath = file.path.replaceAll('//', '/');
+        final matchedSong = allDeviceSongs.where((s) {
+          final sData = s.data.replaceAll('//', '/');
+          return sData == normalizedPath;
+        }).firstOrNull;
+        mediaStoreId = matchedSong?.id;
+      }
+
+      final title = (info?.title != null && info!.title.trim().isNotEmpty)
+          ? info.title
+          : p.basenameWithoutExtension(file.path);
+      
+      final artist = (info?.artist != null && info!.artist.trim().isNotEmpty)
+          ? info.artist
+          : 'Unknown Artist';
+          
+      final album = (info?.album != null && info!.album.trim().isNotEmpty)
+          ? info.album
+          : 'Unknown Album';
+
       songsToSave.add(
         Song(
           path: file.path,
-          title: (metadata?.trackName != null && metadata!.trackName!.trim().isNotEmpty)
-              ? metadata.trackName!
-              : p.basenameWithoutExtension(file.path),
-          artist: (metadata?.trackArtistNames != null && metadata!.trackArtistNames!.isNotEmpty)
-              ? metadata.trackArtistNames!.join(', ')
-              : 'Unknown Artist',
-          album: (metadata?.albumName != null && metadata!.albumName!.trim().isNotEmpty)
-              ? metadata.albumName!
-              : 'Unknown Album',
-          duration: metadata?.trackDuration,
+          title: title,
+          artist: artist,
+          album: album,
+          duration: info?.durationMs,
           size: await file.length(),
           dateAdded: DateTime.now(),
-          trackNumber: metadata?.trackNumber,
+          trackNumber: info?.trackNumber != null ? int.tryParse(info!.trackNumber.toString()) : null,
+          mediaStoreId: mediaStoreId,
           localArtworkPath: localArtPath,
         ),
       );
