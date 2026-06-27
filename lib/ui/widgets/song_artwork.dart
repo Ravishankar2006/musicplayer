@@ -26,6 +26,7 @@ class SongArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('art path=$localArtworkPath exists=${localArtworkPath != null ? File(localArtworkPath!).existsSync() : false}');
     final hasArtwork = _hasValidArtworkPath();
 
     return ClipRRect(

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:audio_info/audio_info.dart';
+import 'package:audiotags/audiotags.dart';
 import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -75,22 +75,22 @@ class MusicScanner {
     }
 
     for (final file in audioFiles) {
-      AudioData? info;
+      Tag? tag;
       String? localArtPath;
 
       try {
-        info = await AudioInfo.getAudioInfo(file.path);
-        
-        if (info != null && info.hasArtwork == true) {
-          final albumArt = await AudioInfo.getAudioImage(file.path);
-          if (albumArt != null && albumArt.isNotEmpty) {
+        tag = await AudioTags.read(file.path);
+
+        final pictures = tag?.pictures;
+        if (pictures != null && pictures.isNotEmpty) {
+          final bytes = pictures.first.bytes;
+          if (bytes.isNotEmpty) {
             final hash = _generateFileHash(file.path);
             final artFile = File('${artworkDir.path}/$hash.jpg');
 
             if (!artFile.existsSync()) {
-              await artFile.writeAsBytes(albumArt);
+              await artFile.writeAsBytes(bytes, flush: true);
             }
-
             localArtPath = artFile.path;
           }
         }
@@ -108,28 +108,28 @@ class MusicScanner {
         mediaStoreId = matchedSong?.id;
       }
 
-      final title = (info?.title != null && info!.title.trim().isNotEmpty)
-          ? info.title
+      final title = (tag?.title != null && tag!.title!.trim().isNotEmpty)
+          ? tag.title
           : p.basenameWithoutExtension(file.path);
       
-      final artist = (info?.artist != null && info!.artist.trim().isNotEmpty)
-          ? info.artist
+      final artist = (tag?.trackArtist != null && tag!.trackArtist!.trim().isNotEmpty)
+          ? tag.trackArtist
           : 'Unknown Artist';
           
-      final album = (info?.album != null && info!.album.trim().isNotEmpty)
-          ? info.album
+      final album = (tag?.album != null && tag!.album!.trim().isNotEmpty)
+          ? tag.album
           : 'Unknown Album';
 
       songsToSave.add(
         Song(
           path: file.path,
-          title: title,
+          title: title!,
           artist: artist,
           album: album,
-          duration: info?.durationMs,
+          duration: tag?.duration,
           size: await file.length(),
           dateAdded: DateTime.now(),
-          trackNumber: info?.trackNumber != null ? int.tryParse(info!.trackNumber.toString()) : null,
+          trackNumber: tag?.trackNumber,
           mediaStoreId: mediaStoreId,
           localArtworkPath: localArtPath,
         ),
