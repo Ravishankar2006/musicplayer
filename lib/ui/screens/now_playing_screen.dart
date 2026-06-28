@@ -78,7 +78,7 @@ class NowPlayingScreen extends ConsumerWidget {
   ) {
     return Column(
       children: [
-        _buildAppBar(context),
+        _buildAppBar(context, ref),
         const Spacer(),
         
         // Artwork
@@ -142,7 +142,7 @@ class NowPlayingScreen extends ConsumerWidget {
   ) {
     return Column(
       children: [
-        _buildAppBar(context),
+        _buildAppBar(context, ref),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),
@@ -199,7 +199,7 @@ class NowPlayingScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, WidgetRef ref){
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
@@ -223,8 +223,8 @@ class NowPlayingScreen extends ConsumerWidget {
             children: [
               const FullScreenToggle(),
               IconButton(
-                icon: const Icon(Icons.more_horiz_rounded),
-                onPressed: () {},
+                icon: const Icon(Icons.queue_music_rounded),
+                onPressed: () => _showQueueSheet(context),
               ),
             ],
           ),
@@ -389,10 +389,160 @@ class NowPlayingScreen extends ConsumerWidget {
     );
   }
 
+  void _showQueueSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _QueueSheet(),
+    );
+  }
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return "$minutes:$seconds";
+  }
+}
+
+class _QueueSheet extends ConsumerWidget {
+  const _QueueSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final queueAsync = ref.watch(queueProvider);
+    final playbackStateAsync = ref.watch(playbackStateProvider);
+    final audioHandler = ref.read(audioHandlerProvider);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.78,
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Queue',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: queueAsync.when(
+                data: (queue) => playbackStateAsync.when(
+                  data: (playbackState) {
+                    final currentIndex = playbackState.queueIndex ?? 0;
+
+                    if (queue.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Queue is empty',
+                          style: TextStyle(color: AppColors.secondaryText),
+                        ),
+                      );
+                    }
+
+                    return ReorderableListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      itemCount: queue.length,
+                      onReorderItem: (oldIndex, newIndex) async {
+                        await audioHandler.customAction(
+                          'moveQueueItem',
+                          {
+                            'oldIndex': oldIndex,
+                            'newIndex': newIndex,
+                          },
+                        );
+                      },
+                      itemBuilder: (context, index) {
+                        final item = queue[index];
+                        final isCurrent = index == currentIndex;
+                        final artPath = item.extras?['localArtworkPath'] as String?;
+                        final mediaStoreId = item.extras?['mediaStoreId'] as int?;
+
+                        return Container(
+                          key: ValueKey(item.id),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: isCurrent
+                                ? AppColors.primaryText.withValues(alpha: 0.08)
+                                : AppColors.background.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            leading: SongArtwork(
+                              mediaStoreId: mediaStoreId,
+                              localArtworkPath: artPath,
+                              size: 48,
+                              borderRadius: 10,
+                            ),
+                            title: Text(
+                              item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              item.artist ?? 'Unknown Artist',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                            onTap: () async {
+                              await audioHandler.skipToQueueItem(index);
+                              if (context.mounted) Navigator.pop(context);
+                            },
+                            trailing: ReorderableDragStartListener(
+                              index: index,
+                              child: const Icon(
+                                Icons.drag_handle_rounded,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (_, _) => const Center(child: Text('Failed to load playback state')),
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, _) => const Center(child: Text('Failed to load queue')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

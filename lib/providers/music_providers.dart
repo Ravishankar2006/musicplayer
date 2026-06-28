@@ -15,6 +15,11 @@ final musicScannerProvider = Provider((ref) {
   return MusicScanner(dbService);
 });
 
+final queueProvider = StreamProvider<List<MediaItem>>((ref) {
+  final handler = ref.watch(audioHandlerProvider);
+  return handler.queue;
+});
+
 // Audio Handler Provider (initialized in main)
 late MyAudioHandler globalAudioHandler;
 final audioHandlerProvider = Provider((ref) => globalAudioHandler);

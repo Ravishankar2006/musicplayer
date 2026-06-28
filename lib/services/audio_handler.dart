@@ -9,6 +9,7 @@ import 'dart:io' show Platform, File;
 
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
+  late final ConcatenatingAudioSource _playlist;
 
   StreamSubscription<PlaybackEvent>? _playbackEventSub;
   StreamSubscription<Duration>? _positionSub;
@@ -28,7 +29,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   static const String _sessionShuffleIndicesKey = 'session_shuffle_indices';
 
   MyAudioHandler() {
+    _playlist = ConcatenatingAudioSource(children: []);
     _notifyAudioHandlerAboutPlaybackEvents();
+    _listenToQueueChanges();
     _listenToPositionChanges();
     _listenToDurationChanges();
     _listenToCurrentIndexChanges();
@@ -236,8 +239,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
     queue.add(mediaItems);
 
-    final playlist = ConcatenatingAudioSource(
-      children: mediaItems.map((item) {
+    await _playlist.clear();
+    await _playlist.addAll(
+      mediaItems.map((item) {
         return AudioSource.file(
           item.id,
           tag: item,
@@ -245,7 +249,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       }).toList(),
     );
 
-    await _player.setAudioSource(playlist);
+    await _player.setAudioSource(_playlist);
     await _player.setLoopMode(
       _repeatMode == AudioServiceRepeatMode.one
           ? LoopMode.one
@@ -288,8 +292,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     _originalQueue = List<MediaItem>.from(mediaItems);
     queue.add(mediaItems);
 
-    final playlist = ConcatenatingAudioSource(
-      children: mediaItems.map((item) {
+    await _playlist.clear();
+    await _playlist.addAll(
+      mediaItems.map((item) {
         return AudioSource.file(
           item.id,
           tag: item,
@@ -297,7 +302,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       }).toList(),
     );
 
-    await _player.setAudioSource(playlist);
+    await _player.setAudioSource(_playlist);
     await _player.setLoopMode(
       _repeatMode == AudioServiceRepeatMode.one
           ? LoopMode.one
@@ -439,6 +444,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         bool startFromFirst = false,
         int startIndex = 0,
       }) async {
+    if (items.isEmpty) return;
 
     final current = mediaItem.value;
 
@@ -459,12 +465,14 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
     final wasPlaying = _player.playing;
     final currentPosition = _player.position;
-
     final resolvedIndex =
     (startFromFirst ? 0 : startIndex).clamp(0, items.length - 1);
 
+    await _playlist.clear();
+    await _playlist.addAll(audioSources);
+
     await _player.setAudioSource(
-      ConcatenatingAudioSource(children: audioSources),
+      _playlist,
       initialIndex: resolvedIndex,
       initialPosition: startFromFirst ? Duration.zero : currentPosition,
     );
@@ -473,8 +481,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       await _player.play();
     }
 
-    final resolvedItem = audioSources[resolvedIndex].tag as MediaItem;
-    mediaItem.add(resolvedItem);
+    mediaItem.add(items[resolvedIndex]);
   }
 
   Map<String, dynamic> _mediaItemToMap(MediaItem item) {
@@ -691,6 +698,117 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     } finally {
       _isRestoringSession = false;
     }
+  }
+
+
+  Future<void> addSongToQueue(Song song) async {
+    final item = MediaItem(
+      id: song.path,
+      album: song.album ?? 'Unknown Album',
+      title: song.title,
+      artist: song.artist ?? 'Unknown Artist',
+      duration: song.duration != null
+          ? Duration(milliseconds: song.duration!)
+          : Duration.zero,
+      extras: {
+        'mediaStoreId': song.mediaStoreId,
+        'localArtworkPath': song.localArtworkPath,
+      },
+    );
+
+    final updatedQueue = [...queue.value, item];
+    queue.add(updatedQueue);
+    _originalQueue = List<MediaItem>.from(updatedQueue);
+
+    await _playlist.add(
+      AudioSource.file(
+        item.id,
+        tag: item,
+      ),
+    );
+
+    await _saveSession();
+  }
+
+
+  Future<void> playNext(Song song) async {
+    final item = MediaItem(
+      id: song.path,
+      album: song.album ?? 'Unknown Album',
+      title: song.title,
+      artist: song.artist ?? 'Unknown Artist',
+      duration: song.duration != null
+          ? Duration(milliseconds: song.duration!)
+          : Duration.zero,
+      extras: {
+        'mediaStoreId': song.mediaStoreId,
+        'localArtworkPath': song.localArtworkPath,
+      },
+    );
+
+    final currentIndex = _player.currentIndex ?? -1;
+    final insertIndex = currentIndex + 1;
+
+    final currentQueue = [...queue.value];
+    if (insertIndex >= 0 && insertIndex <= currentQueue.length) {
+      currentQueue.insert(insertIndex, item);
+    } else {
+      currentQueue.add(item);
+    }
+
+    queue.add(currentQueue);
+    _originalQueue = List<MediaItem>.from(currentQueue);
+
+    await _playlist.insert(
+      insertIndex.clamp(0, currentQueue.length - 1),
+      AudioSource.file(
+        item.id,
+        tag: item,
+      ),
+    );
+
+    await _saveSession();
+  }
+
+  Future<void> moveQueueItem(int oldIndex, int newIndex) async {
+    final currentQueue = queue.value;
+    if (currentQueue.isEmpty) return;
+    if (oldIndex < 0 || oldIndex >= currentQueue.length) return;
+    if (newIndex < 0 || newIndex >= currentQueue.length) return;
+    if (oldIndex == newIndex) return;
+
+    await _playlist.move(oldIndex, newIndex);
+    await _saveSession();
+  }
+
+  @override
+  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async {
+    switch (name) {
+      case 'moveQueueItem':
+        final oldIndex = extras?['oldIndex'] as int?;
+        final newIndex = extras?['newIndex'] as int?;
+        if (oldIndex != null && newIndex != null) {
+          await moveQueueItem(oldIndex, newIndex);
+        }
+        return null;
+      default:
+        return super.customAction(name, extras);
+    }
+  }
+
+  void _listenToQueueChanges() {
+    _player.sequenceStateStream
+        .map((state) => state?.effectiveSequence)
+        .distinct()
+        .listen((sequence) {
+      final updatedQueue = sequence
+          ?.map((source) => source.tag as MediaItem)
+          .toList() ??
+          <MediaItem>[];
+
+      queue.add(updatedQueue);
+      _originalQueue = List<MediaItem>.from(updatedQueue);
+    });
   }
 
   Future<void> disposePlayer() async {
