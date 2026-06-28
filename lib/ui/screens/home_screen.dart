@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/widgets/mini_player.dart';
 import 'package:musicplayer/ui/widgets/song_artwork.dart';
+import 'package:musicplayer/ui/widgets/fullscreen_toggle.dart';
 import 'package:musicplayer/utils/app_colors.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -129,6 +130,7 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
       actions: [
+        const FullScreenToggle(),
         IconButton(
           icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryText),
           onPressed: () async {

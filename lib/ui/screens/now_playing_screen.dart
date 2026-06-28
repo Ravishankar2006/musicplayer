@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/widgets/song_artwork.dart';
-import 'package:musicplayer/ui/widgets/music_waveform.dart';
+import 'package:musicplayer/ui/widgets/fullscreen_toggle.dart';
 import 'package:musicplayer/utils/app_colors.dart';
 import 'dart:math';
 
@@ -122,24 +122,12 @@ class NowPlayingScreen extends ConsumerWidget {
           ),
         ),
 
-        const SizedBox(height: 32),
-
-        // Visualizer
-        SizedBox(
-          height: 48,
-          child: playbackStateAsync.when(
-            data: (state) => MusicWaveform(isPlaying: state.playing),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-        ),
-
-        const SizedBox(height: 32),
+        const Spacer(),
 
         // Controls
         _buildControls(ref, playbackStateAsync, item),
         
-        const SizedBox(height: 48),
+        const SizedBox(height: 64),
       ],
     );
   }
@@ -197,7 +185,7 @@ class NowPlayingScreen extends ConsumerWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 64),
                         _buildControls(ref, playbackStateAsync, item, isLandscape: true),
                       ],
                     ),
@@ -230,9 +218,15 @@ class NowPlayingScreen extends ConsumerWidget {
               color: AppColors.secondaryText.withValues(alpha: 0.8),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.more_horiz_rounded),
-            onPressed: () {},
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const FullScreenToggle(),
+              IconButton(
+                icon: const Icon(Icons.more_horiz_rounded),
+                onPressed: () {},
+              ),
+            ],
           ),
         ],
       ),

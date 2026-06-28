@@ -37,13 +37,12 @@ dependencies:
 
   # UI & Effects
   glass_kit: ^4.0.2
-  just_waveform: ^0.0.7
-  waveform_visualizer: ^1.0.0
   google_fonts: ^6.1.0
   flutter_blurhash: ^0.8.2
   palette_generator_master: ^1.1.0
   crypto: ^3.0.3
   ffi: ^2.1.2
+  window_manager: ^0.4.3
 
 dev_dependencies:
   flutter_test:
