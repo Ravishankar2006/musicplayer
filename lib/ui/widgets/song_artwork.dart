@@ -1,71 +1,82 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
 class SongArtwork extends StatelessWidget {
   final int? mediaStoreId;
   final String? localArtworkPath;
-  final String? audioPath;
   final double size;
   final double borderRadius;
+  final bool showShadow;
 
   const SongArtwork({
     super.key,
     this.mediaStoreId,
     this.localArtworkPath,
-    this.audioPath,
-    this.size = 200,
-    this.borderRadius = 16,
+    this.size = 50,
+    this.borderRadius = 12,
+    this.showShadow = false,
   });
-
-  bool _hasValidArtworkPath() {
-    if (localArtworkPath == null || localArtworkPath!.trim().isEmpty) {
-      return false;
-    }
-    return File(localArtworkPath!).existsSync();
-  }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('art path=$localArtworkPath exists=${localArtworkPath != null ? File(localArtworkPath!).existsSync() : false}');
-    final hasArtwork = _hasValidArtworkPath();
+    Widget? artwork;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        width: size,
-        height: size,
-        color: Colors.white10,
-        child: hasArtwork
-            ? Image.file(
-          File(localArtworkPath!),
+    if (localArtworkPath != null) {
+      final file = File(localArtworkPath!);
+      if (file.existsSync()) {
+        artwork = Image.file(
+          file,
           fit: BoxFit.cover,
           width: size,
           height: size,
-          gaplessPlayback: true,
-          errorBuilder: (_, _, _) => _buildFallbackArtwork(),
-        )
-            : _buildFallbackArtwork(),
+          cacheWidth: (size * 2).toInt(),
+          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+        );
+      }
+    }
+
+    if (artwork == null && Platform.isAndroid && mediaStoreId != null && mediaStoreId! > 0) {
+      artwork = QueryArtworkWidget(
+        id: mediaStoreId!,
+        type: ArtworkType.AUDIO,
+        artworkFit: BoxFit.cover,
+        artworkWidth: size,
+        artworkHeight: size,
+        nullArtworkWidget: _buildPlaceholder(),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
+                )
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: artwork ?? _buildPlaceholder(),
       ),
     );
   }
 
-  Widget _buildFallbackArtwork() {
+  Widget _buildPlaceholder() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1F1F2E),
-            Color(0xFF101014),
-          ],
-        ),
-      ),
-      child: const Center(
+      color: const Color(0xFF1B2027),
+      child: Center(
         child: Icon(
           Icons.music_note_rounded,
-          size: 90,
-          color: Colors.white24,
+          size: size * 0.5,
+          color: const Color(0xFF98A2B3).withValues(alpha: 0.2),
         ),
       ),
     );

@@ -49,28 +49,17 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> cycleRepeatMode() async {
     switch (_repeatMode) {
       case AudioServiceRepeatMode.none:
-        _repeatMode = AudioServiceRepeatMode.all;
-        await _player.setLoopMode(LoopMode.all);
+        await setRepeatMode(AudioServiceRepeatMode.all);
         break;
       case AudioServiceRepeatMode.all:
-        _repeatMode = AudioServiceRepeatMode.one;
-        await _player.setLoopMode(LoopMode.one);
+        await setRepeatMode(AudioServiceRepeatMode.one);
         break;
       case AudioServiceRepeatMode.one:
-        _repeatMode = AudioServiceRepeatMode.none;
-        await _player.setLoopMode(LoopMode.off);
+        await setRepeatMode(AudioServiceRepeatMode.none);
         break;
       default:
-        _repeatMode = AudioServiceRepeatMode.none;
-        await _player.setLoopMode(LoopMode.off);
+        await setRepeatMode(AudioServiceRepeatMode.none);
     }
-
-    playbackState.add(
-      playbackState.value.copyWith(
-        repeatMode: _repeatMode,
-        shuffleMode: _shuffleMode,
-      ),
-    );
 
     await _saveSession();
   }
@@ -356,6 +345,34 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   @override
   Future<void> onTaskRemoved() async {
     await stop();
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    _repeatMode = repeatMode;
+
+    switch (repeatMode) {
+      case AudioServiceRepeatMode.none:
+        await _player.setLoopMode(LoopMode.off);
+        break;
+      case AudioServiceRepeatMode.one:
+        await _player.setLoopMode(LoopMode.one);
+        break;
+      case AudioServiceRepeatMode.all:
+        await _player.setLoopMode(LoopMode.all);
+        break;
+      case AudioServiceRepeatMode.group:
+        await _player.setLoopMode(LoopMode.all);
+        break;
+    }
+
+    playbackState.add(
+      playbackState.value.copyWith(
+        repeatMode: repeatMode,
+      ),
+    );
+
+    await _saveSession();
   }
 
   @override

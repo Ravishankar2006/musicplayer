@@ -13,7 +13,7 @@ import 'package:waveform_visualizer/waveform_visualizer.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 
 // LC_NUMERIC is typically 1 on Linux (glibc)
-const int LC_NUMERIC = 1;
+const int lcNumeric = 1;
 
 void setupLinuxLocale() {
   if (Platform.isLinux) {
@@ -25,7 +25,7 @@ void setupLinuxLocale() {
       >('setlocale');
 
       final cLocale = 'C'.toNativeUtf8();
-      setlocale(LC_NUMERIC, cLocale);
+      setlocale(lcNumeric, cLocale);
       malloc.free(cLocale);
     } catch (e) {
       // Ignore if setlocale is not found or fails

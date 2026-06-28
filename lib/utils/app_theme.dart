@@ -1,38 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:musicplayer/utils/app_colors.dart';
 
 class AppTheme {
-  // Primary background: deep charcoal to near-black.
-  static const Color primaryBackground = Color(0xFF0C0C0C);
-  
-  // Secondary background glow: midnight blue or smoked violet.
-  static const Color accentGlow = Color(0xFF1A1A2E);
-  
-  // Glass panel tint: translucent white at low opacity.
-  static const Color glassColor = Color(0x1AFFFFFF);
-  
-  // Border highlight: subtle cool-white edge line.
-  static const Color glassBorder = Color(0x33FFFFFF);
-  
-  // Accent colors
-  static const Color accentCyan = Color(0xFF00E5FF);
-  static const Color accentSilver = Color(0xFFE0E0E0);
-  
   static ThemeData get darkTheme {
     return ThemeData(
+      useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: primaryBackground,
+      scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.dark(
-        primary: accentCyan,
-        surface: primaryBackground,
-        onSurface: Colors.white,
+        surface: AppColors.surface,
+        onSurface: AppColors.primaryText,
+        primary: AppColors.primaryText,
       ),
-      textTheme: GoogleFonts.montserratTextTheme(
-        const TextTheme(
-          displayLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-          bodyLarge: TextStyle(color: Colors.white70),
-          bodyMedium: TextStyle(color: Colors.grey),
+      textTheme: GoogleFonts.interTextTheme().copyWith(
+        displayLarge: GoogleFonts.inter(
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primaryText,
+          letterSpacing: -0.5,
+        ),
+        titleLarge: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.primaryText,
+          letterSpacing: -0.2,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: 16,
+          color: AppColors.primaryText,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          fontSize: 14,
+          color: AppColors.secondaryText,
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: AppColors.primaryText,
+        ),
+        subtitleTextStyle: GoogleFonts.inter(
+          fontSize: 13,
+          color: AppColors.secondaryText,
         ),
       ),
     );
