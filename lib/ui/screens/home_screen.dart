@@ -78,10 +78,33 @@ class HomeScreen extends ConsumerWidget {
                                             ],
                                           ),
                                         ),
-                                        const Icon(
-                                          Icons.more_vert_rounded,
-                                          color: AppColors.secondaryText,
-                                          size: 20,
+                                        PopupMenuButton<String>(
+                                          icon: const Icon(
+                                            Icons.more_vert_rounded,
+                                            color: AppColors.secondaryText,
+                                            size: 20,
+                                          ),
+                                          color: AppColors.elevatedSurface,
+                                          onSelected: (value) async {
+                                            switch (value) {
+                                              case 'play_next':
+                                                await audioHandler.playNext(song);
+                                                break;
+                                              case 'add_to_queue':
+                                                await audioHandler.addSongToQueue(song);
+                                                break;
+                                            }
+                                          },
+                                          itemBuilder: (context) => const [
+                                            PopupMenuItem<String>(
+                                              value: 'play_next',
+                                              child: Text('Play next'),
+                                            ),
+                                            PopupMenuItem<String>(
+                                              value: 'add_to_queue',
+                                              child: Text('Add to queue'),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),

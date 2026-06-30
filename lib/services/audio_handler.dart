@@ -142,29 +142,25 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   }
 
   void _listenToCurrentIndexChanges() {
-    _currentIndexSub = _player.currentIndexStream.listen((index) {
-      if (index == null) return;
+    _player.sequenceStateStream.listen((sequenceState) {
+      final sequence = sequenceState?.sequence;
+      final index = sequenceState?.currentIndex;
 
-      final sequence = _player.sequence;
-      if (sequence == null || index < 0 || index >= sequence.length) return;
+      if (sequence == null || index == null) return;
+      if (index < 0 || index >= sequence.length) return;
 
       final source = sequence[index];
       final item = source.tag as MediaItem?;
       if (item == null) return;
 
-      final current = mediaItem.value;
-
-      if (current != null && current.id == item.id) {
-        mediaItem.add(
-          item.copyWith(
-            duration: (current.duration != null && current.duration! > Duration.zero)
-                ? current.duration
-                : item.duration,
-          ),
-        );
-      } else {
-        mediaItem.add(item);
-      }
+      final duration = _player.duration;
+      mediaItem.add(
+        item.copyWith(
+          duration: (duration != null && duration > Duration.zero)
+              ? duration
+              : item.duration,
+        ),
+      );
     });
   }
 
@@ -716,23 +712,24 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       },
     );
 
-    final updatedQueue = [...queue.value, item];
-    queue.add(updatedQueue);
-    _originalQueue = List<MediaItem>.from(updatedQueue);
-
-    await _playlist.add(
-      AudioSource.file(
-        item.id,
-        tag: item,
-      ),
+    final source = AudioSource.file(
+      item.id,
+      tag: item,
     );
+
+    if (_player.audioSource == null) {
+      await _playlist.add(source);
+      await _player.setAudioSource(_playlist, initialIndex: 0);
+    } else {
+      await _playlist.add(source);
+    }
 
     await _saveSession();
   }
 
 
   Future<void> playNext(Song song) async {
-    final item = MediaItem(
+    final newItem = MediaItem(
       id: song.path,
       album: song.album ?? 'Unknown Album',
       title: song.title,
@@ -746,27 +743,64 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       },
     );
 
-    final currentIndex = _player.currentIndex ?? -1;
-    final insertIndex = currentIndex + 1;
+    final currentQueue = List<MediaItem>.from(queue.value);
 
-    final currentQueue = [...queue.value];
-    if (insertIndex >= 0 && insertIndex <= currentQueue.length) {
-      currentQueue.insert(insertIndex, item);
-    } else {
-      currentQueue.add(item);
+    if (currentQueue.isEmpty || _player.audioSource == null) {
+      await _playlist.clear();
+      await _playlist.add(
+        AudioSource.file(
+          newItem.id,
+          tag: newItem,
+        ),
+      );
+      await _player.setAudioSource(_playlist, initialIndex: 0);
+      await _saveSession();
+      return;
     }
 
-    queue.add(currentQueue);
-    _originalQueue = List<MediaItem>.from(currentQueue);
+    final currentItem = mediaItem.value;
+    final currentPosition = _player.position;
+    final wasPlaying = _player.playing;
 
-    await _playlist.insert(
-      insertIndex.clamp(0, currentQueue.length - 1),
-      AudioSource.file(
-        item.id,
-        tag: item,
-      ),
+    int currentQueueIndex = 0;
+    if (currentItem != null) {
+      final foundIndex = currentQueue.indexWhere((item) => item.id == currentItem.id);
+      if (foundIndex != -1) {
+        currentQueueIndex = foundIndex;
+      }
+    }
+
+    final insertIndex = (currentQueueIndex + 1).clamp(0, currentQueue.length);
+    currentQueue.insert(insertIndex, newItem);
+
+    await _playlist.clear();
+    await _playlist.addAll(
+      currentQueue.map((item) {
+        return AudioSource.file(
+          item.id,
+          tag: item,
+        );
+      }).toList(),
     );
 
+    await _player.setAudioSource(
+      _playlist,
+      initialIndex: currentQueueIndex,
+      initialPosition: currentPosition,
+    );
+
+    if (wasPlaying) {
+      await _player.play();
+    }
+
+    await _saveSession();
+  }
+
+  Future<void> removeQueueItemAt(int index) async {
+    final currentQueue = queue.value;
+    if (index < 0 || index >= currentQueue.length) return;
+
+    await _playlist.removeAt(index);
     await _saveSession();
   }
 
@@ -791,6 +825,14 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           await moveQueueItem(oldIndex, newIndex);
         }
         return null;
+
+      case 'removeQueueItemAt':
+        final index = extras?['index'] as int?;
+        if (index != null) {
+          await removeQueueItemAt(index);
+        }
+        return null;
+
       default:
         return super.customAction(name, extras);
     }

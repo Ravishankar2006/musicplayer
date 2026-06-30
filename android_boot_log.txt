@@ -1,0 +1,6 @@
+No supported devices found with name or id matching '1190531461031035'.
+
+The following devices were found:
+sdk gphone16k x86 64 (mobile) • emulator-5554 • android-x64    • Android 17 (API 37) (emulator)
+Linux (desktop)               • linux         • linux-x64      • Fedora Linux 44 (KDE Plasma Desktop Edition) 7.0.13-200.fc44.x86_64
+Chrome (web)                  • chrome        • web-javascript • Google Chrome 149.0.7827.200

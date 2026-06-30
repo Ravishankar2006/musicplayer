@@ -1,0 +1,58 @@
+Launching lib/main.dart on sdk gphone16k x86 64 in debug mode...
+Running Gradle task 'assembleDebug'...                          
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): audiotags, on_audio_query_android
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+
+Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing
+an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+
+If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+Running Gradle task 'assembleDebug'...                             16.2s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...        1,531ms
+D/FlutterJNI( 8471): Beginning load of flutter...
+D/FlutterJNI( 8471): flutter (null) was loaded normally!
+I/flutter ( 8471): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+D/WindowOnBackDispatcher( 8471): setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@7ccd4f8
+I/WindowExtensionsImpl( 8471): Initializing Window Extensions, vendor API level=10, activity embedding enabled=true
+W/UiContextUtils( 8471): Requested context is a non-UI Context. Creating a UI-Context with display: 0. Context: Context=android.app.Application@d688a89, of which baseContext=android.app.ContextImpl@52df2ca
+I/ple.musicplayer( 8471): Compiler allocated 5250KB to compile void android.view.ViewRootImpl.performTraversals(long)
+D/VRI[AudioServiceActivity]( 8471): WindowInsets changed: 1440x3120 statusBars:[0,144,0,0] navigationBars:[0,0,0,84] mandatorySystemGestures:[0,186,0,112] 
+I/Surface ( 8471): Creating surface for consumer unnamed-8471-0 with slotExpansion=1 for 64 slots
+I/Surface ( 8471): Creating surface for consumer VRI[AudioServiceActivity]#0(BLAST Consumer)0 with slotExpansion=1 for 64 slots
+I/Surface ( 8471): Creating surface for consumer unnamed-8471-1 with slotExpansion=1 for 64 slots
+I/Surface ( 8471): Creating surface for consumer ceae904 SurfaceView[com.example.musicplayer/com.ryanheise.audioservice.AudioServiceActivity]#1(BLAST Consumer)1 with slotExpansion=1 for 64 slots
+Syncing files to device sdk gphone16k x86 64...                 
+I/System.out( 8471): flutterEngine warmed up
+I/Choreographer( 8471): Skipped 32 frames!  The application may be doing too much work on its main thread.
+D/WindowLayoutComponentImpl( 8471): Register WindowLayoutInfoListener on Context=com.ryanheise.audioservice.AudioServiceActivity@32dd7b3, of which baseContext=android.app.ContextImpl@e2aa021
+Syncing files to device sdk gphone16k x86 64...                    279ms
+
+Flutter run key commands.
+r Hot reload. 🔥🔥🔥
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on sdk gphone16k x86 64 is available at: http://127.0.0.1:43089/PLCligi3rtw=/
+The Flutter DevTools debugger and profiler on sdk gphone16k x86 64 is available at: http://127.0.0.1:43089/PLCligi3rtw=/devtools/?uri=ws://127.0.0.1:43089/PLCligi3rtw=/ws
+W/isarworker( 8471): type=1400 audit(0.0:40): avc:  denied  { getattr } for  path="/mnt/vm" dev="tmpfs" ino=1 scontext=u:r:untrusted_app_34:s0:c231,c256,c512,c768 tcontext=u:object_r:vm_data_file:s0 tclass=dir permissive=0 app=com.example.musicplayer
+W/isarworker( 8471): type=1400 audit(0.0:41): avc:  denied  { getattr } for  path="/metadata" dev="vdd1" ino=2 scontext=u:r:untrusted_app_34:s0:c231,c256,c512,c768 tcontext=u:object_r:metadata_file:s0 tclass=dir permissive=0 app=com.example.musicplayer
+W/isarworker( 8471): type=1400 audit(0.0:42): avc:  denied  { getattr } for  path="/system_dlkm" dev="dm-1" ino=38 scontext=u:r:untrusted_app_34:s0:c231,c256,c512,c768 tcontext=u:object_r:system_dlkm_file:s0 tclass=dir permissive=0 app=com.example.musicplayer
+I/flutter ( 8471): ╔══════════════════════════════════════════════════════╗
+I/flutter ( 8471): ║                 ISAR CONNECT STARTED                 ║
+I/flutter ( 8471): ╟──────────────────────────────────────────────────────╢
+I/flutter ( 8471): ║         Open the link to connect to the Isar         ║
+I/flutter ( 8471): ║        Inspector while this build is running.        ║
+I/flutter ( 8471): ╟──────────────────────────────────────────────────────╢
+I/flutter ( 8471): ║ https://inspect.isar.dev/3.1.0+1/#/43089/PLCligi3rtw ║
+I/flutter ( 8471): ╚══════════════════════════════════════════════════════╝
+W/isarworker( 8471): type=1400 audit(0.0:43): avc:  denied  { getattr } for  path="/linkerconfig" dev="tmpfs" ino=2 scontext=u:r:untrusted_app_34:s0:c231,c256,c512,c768 tcontext=u:object_r:linkerconfig_file:s0 tclass=dir permissive=0 app=com.example.musicplayer
+W/isarworker( 8471): type=1400 audit(0.0:44): avc:  denied  { getattr } for  path="/linkerconfig" dev="tmpfs" ino=2 scontext=u:r:untrusted_app_34:s0:c231,c256,c512,c768 tcontext=u:object_r:linkerconfig_file:s0 tclass=dir permissive=0 app=com.example.musicplayer
+W/isarworker( 8471): type=1400 audit(0.0:45): avc:  denied  { getattr } for  path="/mnt/vm" dev="tmpfs" ino=1 scontext=u:r:untrusted_app_34:s0:c231,c256,c512,c768 tcontext=u:object_r:vm_data_file:s0 tclass=dir permissive=0 app=com.example.musicplayer
+I/Choreographer( 8471): Skipped 53 frames!  The application may be doing too much work on its main thread.
+D/ProfileInstaller( 8471): Installing profile for com.example.musicplayer
+I/ple.musicplayer( 8471): Background concurrent mark compact GC freed 2409KB AllocSpace bytes, 6(224KB) LOS objects, 49% free, 2748KB/5497KB, paused 109us,5.520ms total 13.831ms

@@ -36,7 +36,10 @@ void setupLinuxLocale() {
 void main() async {
   setupLinuxLocale();
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
+  
+  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+  }
   
   // Initialize Media Kit for robust Linux/Windows playback
   JustAudioMediaKit.ensureInitialized(

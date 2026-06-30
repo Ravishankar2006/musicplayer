@@ -521,11 +521,33 @@ class _QueueSheet extends ConsumerWidget {
                               await audioHandler.skipToQueueItem(index);
                               if (context.mounted) Navigator.pop(context);
                             },
-                            trailing: ReorderableDragStartListener(
-                              index: index,
-                              child: const Icon(
-                                Icons.drag_handle_rounded,
-                                color: AppColors.secondaryText,
+                            trailing: SizedBox(
+                              width: 72,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () async {
+                                      await audioHandler.customAction(
+                                        'removeQueueItemAt',
+                                        {'index': index},
+                                      );
+                                    },
+                                    child: const Icon(
+                                      Icons.close_rounded,
+                                      color: AppColors.secondaryText,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ReorderableDragStartListener(
+                                    index: index,
+                                    child: const Icon(
+                                      Icons.drag_handle_rounded,
+                                      color: AppColors.secondaryText,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
