@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:musicplayer/providers/favorites_provider.dart';
 import 'package:musicplayer/providers/music_providers.dart';
 import 'package:musicplayer/ui/widgets/song_artwork.dart';
 import 'package:musicplayer/ui/widgets/fullscreen_toggle.dart';
@@ -16,6 +17,11 @@ class NowPlayingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentItemAsync = ref.watch(currentMediaItemProvider);
     final playbackStateAsync = ref.watch(playbackStateProvider);
+    final favorites = ref.watch(favoritesProvider);
+    final currentItem = currentItemAsync.value;
+    final currentSongPath = currentItem?.id;
+    final isFavorite =
+        currentSongPath != null && favorites.contains(currentSongPath);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -50,11 +56,29 @@ class NowPlayingScreen extends ConsumerWidget {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final isLandscape = constraints.maxWidth > constraints.maxHeight;
-                    
+
                     if (isLandscape) {
-                      return _buildLandscapeLayout(context, ref, item, playbackStateAsync, localArtworkPath, mediaStoreId);
+                      return _buildLandscapeLayout(
+                        context,
+                        ref,
+                        item,
+                        playbackStateAsync,
+                        localArtworkPath,
+                        mediaStoreId,
+                        isFavorite,
+                        currentSongPath,
+                      );
                     } else {
-                      return _buildPortraitLayout(context, ref, item, playbackStateAsync, localArtworkPath, mediaStoreId);
+                      return _buildPortraitLayout(
+                        context,
+                        ref,
+                        item,
+                        playbackStateAsync,
+                        localArtworkPath,
+                        mediaStoreId,
+                        isFavorite,
+                        currentSongPath,
+                      );
                     }
                   },
                 ),
@@ -69,13 +93,15 @@ class NowPlayingScreen extends ConsumerWidget {
   }
 
   Widget _buildPortraitLayout(
-    BuildContext context,
-    WidgetRef ref,
-    MediaItem item,
-    AsyncValue<PlaybackState> playbackStateAsync,
-    String? localArtworkPath,
-    int? mediaStoreId,
-  ) {
+      BuildContext context,
+      WidgetRef ref,
+      MediaItem item,
+      AsyncValue<PlaybackState> playbackStateAsync,
+      String? localArtworkPath,
+      int? mediaStoreId,
+      bool isFavorite,
+      String? currentSongPath,
+      ) {
     return Column(
       children: [
         _buildAppBar(context, ref),
@@ -97,26 +123,50 @@ class NowPlayingScreen extends ConsumerWidget {
 
         // Typography & Metadata
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                item.title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontSize: 26,
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      item.title,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontSize: 26,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      item.artist ?? 'Unknown Artist',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.secondaryText,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                item.artist ?? 'Unknown Artist',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.secondaryText,
-                  fontWeight: FontWeight.w400,
+              const SizedBox(width: 12),
+              IconButton(
+                icon: Icon(
+                  isFavorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: isFavorite ? Colors.redAccent : AppColors.primaryText,
+                  size: 28,
                 ),
+                onPressed: currentSongPath == null
+                    ? null
+                    : () async {
+                  await ref
+                      .read(favoritesProvider.notifier)
+                      .toggleFavorite(currentSongPath);
+                },
               ),
             ],
           ),
@@ -133,13 +183,15 @@ class NowPlayingScreen extends ConsumerWidget {
   }
 
   Widget _buildLandscapeLayout(
-    BuildContext context,
-    WidgetRef ref,
-    MediaItem item,
-    AsyncValue<PlaybackState> playbackStateAsync,
-    String? localArtworkPath,
-    int? mediaStoreId,
-  ) {
+      BuildContext context,
+      WidgetRef ref,
+      MediaItem item,
+      AsyncValue<PlaybackState> playbackStateAsync,
+      String? localArtworkPath,
+      int? mediaStoreId,
+      bool isFavorite,
+      String? currentSongPath,
+      ) {
     return Column(
       children: [
         _buildAppBar(context, ref),
@@ -168,21 +220,50 @@ class NowPlayingScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          item.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            fontSize: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          item.artist ?? 'Unknown Artist',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppColors.secondaryText,
-                            fontWeight: FontWeight.w400,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                      fontSize: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    item.artist ?? 'Unknown Artist',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: AppColors.secondaryText,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            IconButton(
+                              icon: Icon(
+                                isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: isFavorite ? Colors.redAccent : AppColors.primaryText,
+                                size: 30,
+                              ),
+                              onPressed: currentSongPath == null
+                                  ? null
+                                  : () async {
+                                await ref
+                                    .read(favoritesProvider.notifier)
+                                    .toggleFavorite(currentSongPath);
+                              },
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 64),

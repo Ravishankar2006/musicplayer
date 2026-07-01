@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:musicplayer/providers/favorites_provider.dart';
 import 'package:musicplayer/models/song.dart';
 import 'package:musicplayer/services/audio_handler.dart';
 import 'package:musicplayer/services/database_service.dart';
