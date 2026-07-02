@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:musicplayer/models/song.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:musicplayer/providers/recently_played_provider.dart';
 import 'dart:io' show Platform, File;
 
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {

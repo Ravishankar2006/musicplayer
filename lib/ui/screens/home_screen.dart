@@ -7,6 +7,7 @@ import 'package:musicplayer/ui/widgets/fullscreen_toggle.dart';
 import 'package:musicplayer/utils/app_colors.dart';
 
 import '../../providers/favorites_provider.dart';
+import '../../providers/recently_played_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,6 +30,12 @@ class HomeScreen extends ConsumerWidget {
                     data: (songs) {
                       final favorites = ref.watch(favoritesProvider);
                       final favoriteSongs = songs.where((song) => favorites.contains(song.path)).toList();
+                      final recentlyPlayedPaths = ref.watch(recentlyPlayedProvider);
+                      final recentlyPlayedSongs = recentlyPlayedPaths
+                          .map((path) => songs.where((song) => song.path == path))
+                          .where((matches) => matches.isNotEmpty)
+                          .map((matches) => matches.first)
+                          .toList();
                       if (songs.isEmpty) {
                         return SliverFillRemaining(
                           child: _buildEmptyState(ref),
@@ -36,6 +43,38 @@ class HomeScreen extends ConsumerWidget {
                       }
                       return SliverMainAxisGroup(
                         slivers: [
+                          if (recentlyPlayedSongs.isNotEmpty) ...[
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                child: Text(
+                                  'Recently Played',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primaryText,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                  final song = recentlyPlayedSongs[index];
+                                  return _buildSongRow(
+                                    context,
+                                    ref,
+                                    song,
+                                    audioHandler,
+                                    songs,
+                                  );
+                                },
+                                childCount: recentlyPlayedSongs.length,
+                              ),
+                            ),
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 12),
+                            ),
+                          ],
                           if (favoriteSongs.isNotEmpty) ...[
                             SliverToBoxAdapter(
                               child: Padding(
@@ -165,7 +204,10 @@ class HomeScreen extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => audioHandler.playQueueAtIndex(sourceSongs, playIndex),
+        onTap: () async {
+          await audioHandler.playQueueAtIndex(sourceSongs, playIndex);
+          await ref.read(recentlyPlayedProvider.notifier).addPlayedSong(song.path);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
